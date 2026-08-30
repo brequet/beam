@@ -8,7 +8,7 @@ use topcoat::{
     view::view,
 };
 
-use crate::input::InputService;
+use crate::input::{InputError, InputService};
 use crate::keys::{Key, KeyKind};
 
 /// Shareable host identity, registered as app context and rendered on the page.
@@ -46,6 +46,10 @@ fn button_hint(key: Key) -> Option<&'static str> {
 
 #[page("/")]
 pub async fn home(cx: &Cx) -> Result {
+    // Runtime handlers repeat one canonical outcome line — `status.set(if
+    // outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() })` —
+    // because runtime expressions must compile to JS: no `match`, no helper
+    // calls. The message content itself lives server-side, in the procedures.
     let info: &HostInfo = app_context(cx);
     let hostname = info.hostname.clone();
     let url = info.url.clone();
@@ -168,20 +172,36 @@ pub async fn home(cx: &Cx) -> Result {
     }
 }
 
+/// Rejects a procedure call before it reaches the input backend; the
+/// reason travels to the browser as data.
+fn rejected(message: String) -> Result<Result<String, String>> {
+    Ok(Err(message))
+}
+
+/// One home for the outcome rule: a backend call becomes either its success
+/// message or the error string, both travelling to the browser as data
+/// (`Result<String, String>`), never as exceptions.
+fn backend_outcome(
+    message: String,
+    result: Result<(), InputError>,
+) -> Result<Result<String, String>> {
+    Ok(match result {
+        Ok(()) => Ok(message),
+        Err(error) => Err(error.to_string()),
+    })
+}
+
 /// Sends the given text block into the focused window on the host.
 ///
 /// Errors are returned as data (`Err(String)`) so the browser can show them.
 #[procedure]
 pub async fn send_text(cx: &Cx, text: String) -> Result<Result<String, String>> {
     if text.is_empty() {
-        return Ok(Err("nothing to send".to_owned()));
+        return rejected("nothing to send".to_owned());
     }
 
     let input: &Arc<dyn InputService> = app_context(cx);
-    match input.send_text(&text) {
-        Ok(()) => Ok(Ok("Sent text to host.".to_owned())),
-        Err(error) => Ok(Err(error.to_string())),
-    }
+    backend_outcome("Sent text to host.".to_owned(), input.send_text(&text))
 }
 
 /// Presses one special key on the host.
@@ -191,14 +211,11 @@ pub async fn send_text(cx: &Cx, text: String) -> Result<Result<String, String>> 
 #[procedure]
 pub async fn press_key(cx: &Cx, name: String) -> Result<Result<String, String>> {
     let Some(key) = Key::from_name(&name) else {
-        return Ok(Err(format!("unsupported key: {name}")));
+        return rejected(format!("unsupported key: {name}"));
     };
 
     let input: &Arc<dyn InputService> = app_context(cx);
-    match input.press_key(key) {
-        Ok(()) => Ok(Ok(format!("Sent {}.", key.label()))),
-        Err(error) => Ok(Err(error.to_string())),
-    }
+    backend_outcome(format!("Sent {}.", key.label()), input.press_key(key))
 }
 
 /// Opens an http(s) URL in the host's default browser.
@@ -209,14 +226,14 @@ pub async fn press_key(cx: &Cx, name: String) -> Result<Result<String, String>> 
 pub async fn open_url(cx: &Cx, raw: String) -> Result<Result<String, String>> {
     let url = match validate_open_url(&raw) {
         Ok(url) => url,
-        Err(message) => return Ok(Err(message)),
+        Err(message) => return rejected(message),
     };
 
     let input: &Arc<dyn InputService> = app_context(cx);
-    match input.open_url(&url) {
-        Ok(()) => Ok(Ok(format!("Opened {url} on the host."))),
-        Err(error) => Ok(Err(error.to_string())),
-    }
+    backend_outcome(
+        format!("Opened {url} on the host."),
+        input.open_url(&url),
+    )
 }
 
 /// Only http/https may be opened, with no embedded whitespace or control
@@ -242,6 +259,19 @@ fn validate_open_url(raw: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn backend_results_become_outcome_data() {
+        assert_eq!(
+            backend_outcome("done".to_owned(), Ok(())).unwrap(),
+            Ok("done".to_owned())
+        );
+        let failure = InputError::Inject("boom".to_owned());
+        assert_eq!(
+            backend_outcome("done".to_owned(), Err(failure)).unwrap(),
+            Err("could not inject input into the host OS: boom".to_owned())
+        );
+    }
 
     #[test]
     fn button_hints_derive_from_kind() {
