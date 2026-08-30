@@ -1,3 +1,4 @@
+mod autostart;
 mod input;
 mod ui;
 
@@ -5,7 +6,7 @@ use std::net::{IpAddr, UdpSocket};
 use std::sync::Arc;
 
 use anyhow::Context;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
 use topcoat::context::Cx;
@@ -34,6 +35,36 @@ struct Args {
     /// Log input events instead of injecting real keystrokes (for development).
     #[arg(long)]
     mock: bool,
+
+    /// Hide the console window (used by the autostart task).
+    #[arg(long)]
+    hidden: bool,
+
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Register a logon task so beam starts automatically at sign-in.
+    ///
+    /// Flags passed here are frozen into the task; re-run `beam install`
+    /// after changing them. Idempotent.
+    Install {
+        /// Address to bind the autostart server to (default: 0.0.0.0).
+        #[arg(long)]
+        host: Option<String>,
+
+        /// Port to bind the autostart server to (default: 5000).
+        #[arg(long)]
+        port: Option<u16>,
+
+        /// Log input events instead of injecting real keystrokes.
+        #[arg(long)]
+        mock: bool,
+    },
+    /// Remove the logon task (and stop a task-started beam).
+    Uninstall,
 }
 
 /// Best-effort LAN address detection: a UDP "connect" picks the outbound
@@ -119,6 +150,31 @@ impl Route for StaticRoute {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let result = match &args.command {
+        Some(Command::Install { host, port, mock }) => {
+            autostart::install(&autostart::InstallOptions {
+                host: host.clone(),
+                port: *port,
+                mock: *mock,
+            })
+        }
+        Some(Command::Uninstall) => autostart::uninstall(),
+        None => serve(&args).await,
+    };
+
+    if args.hidden
+        && let Err(err) = &result
+    {
+        autostart::log_status(&format!("beam exited: {err:#}"));
+    }
+    result
+}
+
+async fn serve(args: &Args) -> anyhow::Result<()> {
+    if args.hidden {
+        autostart::hide_console();
+    }
+
     let input: Arc<dyn InputService> = if args.mock {
         println!("mock input backend active: events are logged, not injected");
         Arc::new(MockInput::default())
@@ -168,11 +224,16 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| format!("binding {}:{} failed", args.host, args.port))?;
 
-    println!(
+    let up = format!(
         "beam is up: {lan_ip}:{} (bound to {}:{})",
         args.port, args.host, args.port
     );
-    println!("pair a phone by scanning:\n{}", qr_text(&url));
+    if args.hidden {
+        autostart::log_status(&up);
+    } else {
+        println!("{up}");
+        println!("pair a phone by scanning:\n{}", qr_text(&url));
+    }
 
     topcoat::serve(listener, router)
         .await
