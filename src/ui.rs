@@ -15,6 +15,9 @@ use crate::keys::{Key, KeyKind};
 pub struct HostInfo {
     pub hostname: String,
     pub url: String,
+    /// This build's procedure-id hash; the page's connection-health script
+    /// compares it against `/healthz` to notice a swapped binary.
+    pub build: String,
 }
 
 /// Which Keys the page shows in "02 — Remote", in display order.
@@ -53,6 +56,8 @@ pub async fn home(cx: &Cx) -> Result {
     let info: &HostInfo = app_context(cx);
     let hostname = info.hostname.clone();
     let url = info.url.clone();
+    let build = info.build.clone();
+    let reconnecting = format!("reconnecting to {hostname}…");
 
     view! {
         signal text = String::new();
@@ -65,16 +70,22 @@ pub async fn home(cx: &Cx) -> Result {
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <meta name="theme-color" content="#fffdf5">
+                <meta name="beam-build" content=(build)>
                 <title>"beam"</title>
                 <link rel="icon" href="/icon-192.png">
                 <link rel="manifest" href="/manifest.webmanifest">
                 <link rel="apple-touch-icon" href="/icon-192.png">
                 <link rel="stylesheet" href="/beam.css">
                 topcoat::runtime::script()
+                <script src="/beam.js" defer="defer"></script>
             </head>
             <body>
+                <div class="banner" role="status">(reconnecting)</div>
                 <header class="topbar">
-                    <b>(hostname)</b>
+                    <span class="host">
+                        <b>(hostname)</b>
+                        <span class="dot" title="connection"></span>
+                    </span>
                     <span class="mono">(url)</span>
                 </header>
                 <div class="blocks">
@@ -230,10 +241,7 @@ pub async fn open_url(cx: &Cx, raw: String) -> Result<Result<String, String>> {
     };
 
     let input: &Arc<dyn InputService> = app_context(cx);
-    backend_outcome(
-        format!("Opened {url} on the host."),
-        input.open_url(&url),
-    )
+    backend_outcome(format!("Opened {url} on the host."), input.open_url(&url))
 }
 
 /// Only http/https may be opened, with no embedded whitespace or control

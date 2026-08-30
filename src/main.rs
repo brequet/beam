@@ -3,6 +3,8 @@ mod input;
 mod keys;
 mod ui;
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::net::{IpAddr, UdpSocket};
 use std::sync::Arc;
 
@@ -15,7 +17,7 @@ use topcoat::router::{
     Body, HeaderValue, Method, Methods, Path, PathBuf, Route, RouteFuture, RouteId, Router, header,
     response::Response,
 };
-use topcoat::runtime::RouterBuilderProcedureExt;
+use topcoat::runtime::{Procedure, RouterBuilderProcedureExt};
 
 use crate::input::{InputService, MockInput, OsInput};
 use crate::ui::HostInfo;
@@ -74,6 +76,20 @@ fn detect_lan_ip() -> Option<IpAddr> {
     let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
     socket.connect("8.8.8.8:80").ok()?;
     socket.local_addr().ok().map(|addr| addr.ip())
+}
+
+/// One hash over every procedure id, identifying this build.
+///
+/// Procedure ids are compile-time UUIDs: a page opened by an older binary
+/// carries stale ids that 404 against a newer one. The page bakes this hash
+/// in at render time and the `/healthz` route serves it, so the page can
+/// detect the swap and reload itself once.
+fn build_id() -> String {
+    let mut hasher = DefaultHasher::new();
+    ui::send_text.id().hash(&mut hasher);
+    ui::press_key.id().hash(&mut hasher);
+    ui::open_url.id().hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
 }
 
 /// Renders `text` as a scannable QR code built from half-block characters.
@@ -147,6 +163,56 @@ impl Route for StaticRoute {
     }
 }
 
+/// A `Route` answering the page's connection probe with this build's id.
+///
+/// The connection-health script in `beam.js` polls `/healthz` only while it
+/// believes the server is gone; a 200 means recovery (and, if the build id
+/// differs from the one the page was rendered with, one self-reload).
+struct HealthRoute {
+    id: RouteId,
+    path: PathBuf,
+    body: String,
+}
+
+impl HealthRoute {
+    fn new(build: String) -> Self {
+        Self {
+            id: RouteId::new(),
+            path: Path::new("/healthz").to_owned(),
+            body: format!("{{\"build\":\"{build}\"}}"),
+        }
+    }
+}
+
+impl Route for HealthRoute {
+    fn id(&self) -> RouteId {
+        self.id
+    }
+
+    fn methods(&self) -> Methods<'_> {
+        Methods::Only(&[Method::GET])
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn handle<'cx>(&'cx self, _cx: &'cx Cx, _body: Body) -> RouteFuture<'cx> {
+        Box::pin(async move {
+            let mut response = Response::new(Body::from(self.body.clone()));
+            let headers = response.headers_mut();
+            headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/json"),
+            );
+            // The probe exists to reflect whether the server is answering
+            // right now, so it must never be cached.
+            headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+            Ok(response)
+        })
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -195,6 +261,8 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .filter(|name| !name.is_empty())
         .unwrap_or_else(|| "beam".to_owned());
 
+    let build = build_id();
+
     let router = Router::builder()
         .page(ui::home)
         .procedure(ui::send_text)
@@ -204,6 +272,11 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
             "/beam.css",
             include_bytes!("../assets/beam.css"),
             "text/css",
+        ))
+        .route(StaticRoute::new(
+            "/beam.js",
+            include_bytes!("../assets/beam.js"),
+            "text/javascript",
         ))
         .route(StaticRoute::new(
             "/manifest.webmanifest",
@@ -220,10 +293,12 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
             include_bytes!("../assets/icon-512.png"),
             "image/png",
         ))
+        .route(HealthRoute::new(build.clone()))
         .app_context(input)
         .app_context(HostInfo {
             hostname,
             url: url.clone(),
+            build,
         })
         .assets(AssetBundle::load().context(
             "asset bundle not found next to the executable; run `topcoat asset bundle` (or use `topcoat dev`)",

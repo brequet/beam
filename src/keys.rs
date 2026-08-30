@@ -204,7 +204,10 @@ mod tests {
     #[test]
     fn from_name_is_case_insensitive_but_has_no_synonyms() {
         assert_eq!(Key::from_name("ENTER"), Some(Key::Enter));
-        assert_eq!(Key::from_name("Media-Play-Pause"), Some(Key::MediaPlayPause));
+        assert_eq!(
+            Key::from_name("Media-Play-Pause"),
+            Some(Key::MediaPlayPause)
+        );
         for rejected in ["", "f13", "ctrl", "return", "esc", "volume_up"] {
             assert_eq!(Key::from_name(rejected), None, "must reject {rejected:?}");
         }
