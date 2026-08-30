@@ -188,6 +188,12 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
 
     let url = format!("http://{lan_ip}:{}", args.port);
 
+    let hostname = hostname::get()
+        .map(|name| name.to_string_lossy().into_owned())
+        .ok()
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "beam".to_owned());
+
     let router = Router::builder()
         .page(ui::home)
         .procedure(ui::send_text)
@@ -214,7 +220,10 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
             "image/png",
         ))
         .app_context(input)
-        .app_context(HostInfo { url: url.clone() })
+        .app_context(HostInfo {
+            hostname,
+            url: url.clone(),
+        })
         .assets(AssetBundle::load().context(
             "asset bundle not found next to the executable; run `topcoat asset bundle` (or use `topcoat dev`)",
         )?)

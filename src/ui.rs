@@ -10,14 +10,16 @@ use topcoat::{
 
 use crate::input::{InputService, KeyName};
 
-/// Shareable host address, registered as app context and rendered on the page.
+/// Shareable host identity, registered as app context and rendered on the page.
 pub struct HostInfo {
+    pub hostname: String,
     pub url: String,
 }
 
 #[page("/")]
 pub async fn home(cx: &Cx) -> Result {
     let info: &HostInfo = app_context(cx);
+    let hostname = info.hostname.clone();
     let url = info.url.clone();
 
     view! {
@@ -40,7 +42,7 @@ pub async fn home(cx: &Cx) -> Result {
             </head>
             <body>
                 <header class="topbar">
-                    <b>"BEAM / REMOTE INPUT"</b>
+                    <b>(hostname)</b>
                     <span class="mono">(url)</span>
                 </header>
                 <div class="blocks">

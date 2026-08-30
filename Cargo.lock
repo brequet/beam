@@ -157,6 +157,7 @@ dependencies = [
  "anyhow",
  "clap",
  "enigo",
+ "hostname",
  "open",
  "qrcode",
  "thiserror",
