@@ -8,7 +8,11 @@ use anyhow::Context;
 use clap::Parser;
 use tokio::net::TcpListener;
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
-use topcoat::router::Router;
+use topcoat::context::Cx;
+use topcoat::router::{
+    Body, HeaderValue, Method, Methods, Path, PathBuf, Route, RouteFuture, RouteId, Router, header,
+    response::Response,
+};
 use topcoat::runtime::RouterBuilderProcedureExt;
 
 use crate::input::{InputService, MockInput, OsInput};
@@ -56,6 +60,61 @@ fn qr_text(text: &str) -> String {
         .to_string()
 }
 
+/// A `Route` serving one immutable file embedded in the binary.
+///
+/// Used for the small static files beam needs at fixed paths (PWA manifest,
+/// icons) so they ship inside the single executable instead of riding the
+/// asset bundle.
+struct StaticRoute {
+    id: RouteId,
+    path: PathBuf,
+    body: &'static [u8],
+    content_type: &'static str,
+}
+
+impl StaticRoute {
+    fn new(path: &'static str, body: &'static [u8], content_type: &'static str) -> Self {
+        Self {
+            id: RouteId::new(),
+            path: Path::new(path).to_owned(),
+            body,
+            content_type,
+        }
+    }
+}
+
+impl Route for StaticRoute {
+    fn id(&self) -> RouteId {
+        self.id
+    }
+
+    fn methods(&self) -> Methods<'_> {
+        Methods::Only(&[Method::GET])
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn handle<'cx>(&'cx self, _cx: &'cx Cx, _body: Body) -> RouteFuture<'cx> {
+        Box::pin(async move {
+            let mut response = Response::new(Body::from(self.body));
+            let headers = response.headers_mut();
+            headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static(self.content_type),
+            );
+            // Small files at fixed paths: revalidate cheaply instead of
+            // long-lived caching, so an update reaches devices quickly.
+            headers.insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static("max-age=300"),
+            );
+            Ok(response)
+        })
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -77,6 +136,21 @@ async fn main() -> anyhow::Result<()> {
         .page(ui::home)
         .procedure(ui::send_text)
         .procedure(ui::press_key)
+        .route(StaticRoute::new(
+            "/manifest.webmanifest",
+            include_bytes!("../assets/manifest.json"),
+            "application/manifest+json",
+        ))
+        .route(StaticRoute::new(
+            "/icon-192.png",
+            include_bytes!("../assets/icon-192.png"),
+            "image/png",
+        ))
+        .route(StaticRoute::new(
+            "/icon-512.png",
+            include_bytes!("../assets/icon-512.png"),
+            "image/png",
+        ))
         .app_context(input)
         .app_context(HostInfo { url: url.clone() })
         .assets(AssetBundle::load().context(

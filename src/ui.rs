@@ -29,7 +29,11 @@ pub async fn home(cx: &Cx) -> Result {
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta name="theme-color" content="#0f172a">
                 <title>"beam"</title>
+                <link rel="icon" href="/icon-192.png">
+                <link rel="manifest" href="/manifest.webmanifest">
+                <link rel="apple-touch-icon" href="/icon-192.png">
                 topcoat::runtime::script()
                 <style>"body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; padding: 24px 16px; min-height: 100vh; } main { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; } h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.02em; } .muted { margin: 0; color: #94a3b8; font-size: 0.9rem; } .url { margin: 0; font-size: 0.9rem; color: #94a3b8; } .url code { color: #7dd3fc; background: #1e293b; padding: 2px 8px; border-radius: 6px; } textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid #334155; border-radius: 10px; padding: 12px; font: inherit; background: #1e293b; color: #e2e8f0; } textarea:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } .row { display: flex; gap: 8px; flex-wrap: wrap; } button { border: 1px solid #334155; background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 10px 16px; font: inherit; cursor: pointer; } button:hover { background: #334155; } button:active { transform: translateY(1px); } .primary { flex: 1; background: #0ea5e9; border-color: #0ea5e9; color: #082f49; font-weight: 600; } .primary:hover { background: #38bdf8; } .status { margin: 4px 0 0; min-height: 1.2em; color: #94a3b8; font-size: 0.9rem; }"</style>
             </head>

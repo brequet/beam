@@ -42,10 +42,6 @@ touch targets ≥ 44px and the textarea the visual hero. The Topcoat `tailwind`
 feature is an alternative if we want utility classes — but that pulls the
 asset pipeline; only adopt if the plain CSS starts hurting.
 
-### PWA manifest — S
-A minimal `manifest.json` (+ icon) so the phone can "Add to Home Screen" and
-launch beam like an app, without a store or install step.
-
 ### Client feedback — S
 Haptic (`navigator.vibrate`) and/or a subtle button-press animation on send;
 disable page sleep while the tab is open (`screen wake lock API`) so the
