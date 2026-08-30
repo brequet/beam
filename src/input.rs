@@ -72,8 +72,8 @@ pub struct OsInput {
 
 impl OsInput {
     pub fn new() -> Result<Self, InputError> {
-        let enigo =
-            Enigo::new(&Settings::default()).map_err(|error| InputError::Init(error.to_string()))?;
+        let enigo = Enigo::new(&Settings::default())
+            .map_err(|error| InputError::Init(error.to_string()))?;
         Ok(Self {
             enigo: Mutex::new(enigo),
         })
