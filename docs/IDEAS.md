@@ -20,11 +20,6 @@ Nice version: a `beam install` / `beam uninstall` subcommand that registers
 the platform-specific task idempotently, plus a tray icon showing the URL and
 a "quit" action.
 
-### QR code pairing — S
-The phone currently has to type the URL. Print a scannable QR code to the
-terminal at startup (`qrcode` crate renders ASCII; no image needed). Tiny
-effort, removes the only real friction in daily use.
-
 ### Opt-in pairing token — M
 beam is unauthenticated by design (see README security note), which is only
 okay on trusted Wi-Fi. Optional hardening: generate a random token at startup,

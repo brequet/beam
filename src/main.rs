@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Parser;
+use tokio::net::TcpListener;
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
 use topcoat::router::Router;
 use topcoat::runtime::RouterBuilderProcedureExt;
-use tokio::net::TcpListener;
 
 use crate::input::{InputService, MockInput, OsInput};
 use crate::ui::HostInfo;
@@ -40,6 +40,22 @@ fn detect_lan_ip() -> Option<IpAddr> {
     socket.local_addr().ok().map(|addr| addr.ip())
 }
 
+/// Renders `text` as a scannable QR code built from half-block characters.
+///
+/// The colors are swapped (dark modules render as blanks) so the code shows
+/// up dark-on-light on the usual dark terminal theme; scanners decode the
+/// inverse just as well on light themes.
+fn qr_text(text: &str) -> String {
+    use qrcode::render::unicode;
+    qrcode::QrCode::new(text.as_bytes())
+        .expect("QR payload fits the code")
+        .render::<unicode::Dense1x2>()
+        .dark_color(unicode::Dense1x2::Light)
+        .light_color(unicode::Dense1x2::Dark)
+        .build()
+        .to_string()
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -55,14 +71,14 @@ async fn main() -> anyhow::Result<()> {
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "localhost".to_owned());
 
+    let url = format!("http://{lan_ip}:{}", args.port);
+
     let router = Router::builder()
         .page(ui::home)
         .procedure(ui::send_text)
         .procedure(ui::press_key)
         .app_context(input)
-        .app_context(HostInfo {
-            url: format!("http://{lan_ip}:{}", args.port),
-        })
+        .app_context(HostInfo { url: url.clone() })
         .assets(AssetBundle::load().context(
             "asset bundle not found next to the executable; run `topcoat asset bundle` (or use `topcoat dev`)",
         )?)
@@ -72,8 +88,26 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| format!("binding {}:{} failed", args.host, args.port))?;
 
-    println!("beam is up: {lan_ip}:{} (bound to {}:{})", args.port, args.host, args.port);
+    println!(
+        "beam is up: {lan_ip}:{} (bound to {}:{})",
+        args.port, args.host, args.port
+    );
+    println!("pair a phone by scanning:\n{}", qr_text(&url));
 
-    topcoat::serve(listener, router).await.context("serving beam")?;
+    topcoat::serve(listener, router)
+        .await
+        .context("serving beam")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qr_renders_a_multiline_block_graphic() {
+        let qr = qr_text("http://192.168.1.5:5000");
+        assert!(qr.lines().count() > 10, "expected many rows, got {qr:?}");
+        assert!(qr.chars().any(|c| c != ' ' && c != '\n'), "expected marks");
+    }
 }

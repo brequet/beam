@@ -45,8 +45,8 @@ Or use the dev loop (watch, rebuild, rebundle, auto-reload):
 topcoat dev
 ```
 
-Then open the printed URL from any device on the same Wi-Fi, e.g.
-`http://192.168.1.138:5000`.
+Then scan the printed QR code with a phone on the same Wi-Fi (or open the
+printed URL manually), e.g. `http://192.168.1.138:5000`.
 
 ### Options
 
