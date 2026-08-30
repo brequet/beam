@@ -9,12 +9,16 @@ to devices on the local Wi-Fi and injects what they send as keyboard input
 into the host's focused window (enigo). No auth, no database, by design.
 
 - `src/main.rs` — clap CLI (`--host`, `--port`, `--mock`), router wiring, serving
+- `src/keys.rs` — the key catalogue: every `Key` a device can send, with its
+  wire name, label, and kind; the single source of truth for `press_key` and
+  the page's key buttons
 - `src/input.rs` — `InputService` trait; `OsInput` (enigo) and `MockInput` backends
 - `src/ui.rs` — Topcoat `view!` page + `send_text` / `press_key` procedures
 
-Domain rules: the web layer only talks to the `InputService` trait; key-name
-mapping lives in `input.rs`; errors surfaced to the browser are data
-(`Result<String, String>`), never exceptions.
+Domain rules: the web layer only talks to the `InputService` trait; the key
+catalogue (`keys.rs`) is the single source of truth for wire names and labels;
+the enigo injection mapping lives in `input.rs`; errors surfaced to the
+browser are data (`Result<String, String>`), never exceptions.
 
 ## Commands
 

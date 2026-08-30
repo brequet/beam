@@ -8,12 +8,40 @@ use topcoat::{
     view::view,
 };
 
-use crate::input::{InputService, KeyName};
+use crate::input::InputService;
+use crate::keys::{Key, KeyKind};
 
 /// Shareable host identity, registered as app context and rendered on the page.
 pub struct HostInfo {
     pub hostname: String,
     pub url: String,
+}
+
+/// Which Keys the page shows in "02 — Remote", in display order.
+///
+/// The page owns placement; the key catalogue owns what the keys are.
+const REMOTE_KEYS: &[Key] = &[
+    Key::J,
+    Key::MediaPlayPause,
+    Key::L,
+    Key::VolumeDown,
+    Key::VolumeMute,
+    Key::VolumeUp,
+    Key::F,
+];
+
+/// Which Keys the page shows in "03 — Keys", in display order.
+const TYPING_KEYS: &[Key] = &[Key::Enter, Key::Space, Key::Backspace, Key::Tab];
+
+/// The small hint under a key button, derived from the Key's kind: media
+/// keys show "media key", letter keys show their wire name, typing keys
+/// show nothing.
+fn button_hint(key: Key) -> Option<&'static str> {
+    match key.kind() {
+        KeyKind::Media => Some("media key"),
+        KeyKind::Letter => Some(key.wire_name()),
+        KeyKind::Typing => None,
+    }
 }
 
 #[page("/")]
@@ -71,56 +99,45 @@ pub async fn home(cx: &Cx) -> Result {
                     <section>
                         <span class="tag">"02 — Remote"</span>
                         <div class="remote">
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("j".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"−10s"<small>"j"</small></button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("media-play-pause".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Play/Pause"<small>"media key"</small></button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("l".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"+10s"<small>"l"</small></button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("volume-down".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Vol −"<small>"media key"</small></button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("volume-mute".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Mute"<small>"media key"</small></button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("volume-up".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Vol +"<small>"media key"</small></button>
-                            <button class="wide" @click=$(async |_e| {
-                                let outcome = press_key("f".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Fullscreen"<small>"f"</small></button>
+                            for &key in REMOTE_KEYS {
+                                let wire = key.wire_name();
+                                <button
+                                    class=(if key == Key::F { Some("wide") } else { None })
+                                    @click=$(async move |_e| {
+                                        let outcome = press_key(wire.to_owned()).await;
+                                        status.set(if outcome.is_ok() {
+                                            outcome.unwrap()
+                                        } else {
+                                            outcome.err().unwrap()
+                                        });
+                                    })
+                                >
+                                    (key.label())
+                                    match button_hint(key) {
+                                        Some(hint) => <small>(hint)</small>,
+                                        None => {}
+                                    }
+                                </button>
+                            }
                         </div>
                         <p class="remote-hint">"f · j · l go to the host's focused window — click the video first."</p>
                     </section>
                     <section>
                         <span class="tag">"03 — Keys"</span>
                         <div class="keys">
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("enter".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Enter"</button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("space".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Space"</button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("backspace".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Bksp"</button>
-                            <button @click=$(async |_e| {
-                                let outcome = press_key("tab".to_owned()).await;
-                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                            })>"Tab"</button>
+                            for &key in TYPING_KEYS {
+                                let wire = key.wire_name();
+                                <button
+                                    @click=$(async move |_e| {
+                                        let outcome = press_key(wire.to_owned()).await;
+                                        status.set(if outcome.is_ok() {
+                                            outcome.unwrap()
+                                        } else {
+                                            outcome.err().unwrap()
+                                        });
+                                    })
+                                >(key.label())</button>
+                            }
                         </div>
                     </section>
                     <section>
@@ -168,9 +185,12 @@ pub async fn send_text(cx: &Cx, text: String) -> Result<Result<String, String>> 
 }
 
 /// Presses one special key on the host.
+///
+/// The key catalogue is the complete description of what devices can send;
+/// anything else is rejected here.
 #[procedure]
 pub async fn press_key(cx: &Cx, name: String) -> Result<Result<String, String>> {
-    let Some(key) = KeyName::from_name(&name) else {
+    let Some(key) = Key::from_name(&name) else {
         return Ok(Err(format!("unsupported key: {name}")));
     };
 
@@ -222,6 +242,16 @@ fn validate_open_url(raw: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn button_hints_derive_from_kind() {
+        assert_eq!(button_hint(Key::VolumeUp), Some("media key"));
+        assert_eq!(button_hint(Key::MediaPlayPause), Some("media key"));
+        assert_eq!(button_hint(Key::J), Some("j"));
+        assert_eq!(button_hint(Key::F), Some("f"));
+        assert_eq!(button_hint(Key::Enter), None);
+        assert_eq!(button_hint(Key::Tab), None);
+    }
 
     #[test]
     fn open_url_accepts_trimmed_http_and_https() {

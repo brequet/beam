@@ -1,5 +1,6 @@
 mod autostart;
 mod input;
+mod keys;
 mod ui;
 
 use std::net::{IpAddr, UdpSocket};

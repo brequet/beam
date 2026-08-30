@@ -13,6 +13,7 @@ injection).
 
 ```
 src/main.rs        CLI (clap), router wiring, LAN IP detection
+src/keys.rs        Key catalogue: every special key with wire name, label, kind
 src/input.rs       InputService abstraction: OsInput (enigo) + MockInput (dev/tests)
 src/ui.rs          Topcoat view! page + send_text / press_key / open_url procedures
 src/autostart.rs   Logon-task install/uninstall (Windows) + --hidden helpers
