@@ -9,12 +9,18 @@
 #   scripts/beam-dev.ps1 start -Port 5000         # REAL input injection
 #   scripts/beam-dev.ps1 stop  -Port 5001
 #   scripts/beam-dev.ps1 log  -Port 5001 [-Follow]
+#
+# 'start' kills any stale server on the port, then rebuilds the binary and
+# re-bundles assets (skip with -NoBuild) before spawning — so the page always
+# serves fresh code. Kill must happen first: a running beam.exe locks the
+# binary and cargo could not relink over it.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet("start", "stop", "log")][string]$Command,
     [int]$Port = 5001,
     [switch]$Mock,
-    [switch]$Follow
+    [switch]$Follow,
+    [switch]$NoBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,15 +40,29 @@ function Get-BeamPidOnPort {
 switch ($Command) {
 
     "start" {
-        if (-not (Test-Path $exe)) {
-            throw "beam.exe not found at $exe - run 'just build' first"
-        }
-
-        # Kill a stale server holding the port instead of failing to bind.
+        # Kill a stale server holding the port BEFORE building (a running
+        # beam.exe locks the binary), instead of failing to bind later.
         $stale = @(Get-BeamPidOnPort)
         foreach ($procId in $stale) {
             Stop-Process -Id $procId -Force
             Write-Host "killed stale beam pid=$procId on port $Port"
+        }
+
+        if (-not $NoBuild) {
+            Push-Location $root
+            try {
+                cargo build
+                if ($LASTEXITCODE -ne 0) { throw "cargo build failed with exit code $LASTEXITCODE" }
+                topcoat asset bundle
+                if ($LASTEXITCODE -ne 0) { throw "topcoat asset bundle failed with exit code $LASTEXITCODE" }
+            }
+            finally {
+                Pop-Location
+            }
+        }
+
+        if (-not (Test-Path $exe)) {
+            throw "beam.exe not found at $exe - run 'just build' first"
         }
 
         # Wrapper script: WMI spawns 'cmd /c wrapper', wrapper owns the log

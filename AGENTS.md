@@ -28,8 +28,9 @@ Use the justfile (pwsh shell on Windows):
 - `just bundle` — build + bundle UI assets (required before `cargo run`; the
   bundle is per-profile, so re-run after `--release` builds)
 - `just run` — bundle then run in the foreground (blocks; interactive use only)
-- `just dev-mock` — start detached mock server on :5001 (no real keystrokes)
-- `just dev` — start detached server on :5000 with REAL injection
+- `just dev-mock` — rebuild + re-bundle, then start a detached mock server on
+  :5001 (no real keystrokes); also kills any stale server on the port first
+- `just dev` — same, on :5000 with REAL injection
 - `just dev-stop` / `just dev-log` — manage the detached server
 - `just check` — clippy + tests; `just fmt` — format
 

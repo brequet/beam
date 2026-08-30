@@ -18,11 +18,11 @@ run *args:
     topcoat asset bundle
     cargo run -- {{args}}
 
-# Start a DETACHED mock server (no real keystrokes; returns immediately).
+# Start a DETACHED mock server (rebuilds + re-bundles first; no real keystrokes).
 dev-mock port="5001":
     pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 start -Port {{port}} -Mock
 
-# Start a DETACHED server with REAL input injection (returns immediately).
+# Start a DETACHED server with REAL injection (rebuilds + re-bundles first).
 dev port="5000":
     pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 start -Port {{port}}
 
