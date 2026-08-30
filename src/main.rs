@@ -138,6 +138,11 @@ async fn main() -> anyhow::Result<()> {
         .procedure(ui::press_key)
         .procedure(ui::open_url)
         .route(StaticRoute::new(
+            "/beam.css",
+            include_bytes!("../assets/beam.css"),
+            "text/css",
+        ))
+        .route(StaticRoute::new(
             "/manifest.webmanifest",
             include_bytes!("../assets/manifest.json"),
             "application/manifest+json",

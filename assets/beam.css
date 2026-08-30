@@ -1,0 +1,205 @@
+:root {
+  --ink: #0a0a0a;
+  --paper: #fffdf5;
+  --accent: #ffd400;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.topbar {
+  border-bottom: 2px solid var(--ink);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.topbar b {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.topbar span {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.blocks {
+  display: grid;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (min-width: 820px) {
+  .blocks {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .b-text {
+    grid-row: span 2;
+    border-right: 2px solid var(--ink);
+  }
+
+  .status {
+    grid-column: 1 / -1;
+  }
+}
+
+section {
+  border-bottom: 2px solid var(--ink);
+  padding: 18px 16px;
+  min-width: 0;
+}
+
+.tag {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 220px;
+  border: 2px solid var(--ink);
+  padding: 12px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  background: transparent;
+  resize: vertical;
+}
+
+@media (max-width: 819px) {
+  textarea {
+    min-height: 160px;
+  }
+}
+
+textarea:focus {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--accent);
+}
+
+textarea::placeholder {
+  color: #9b9788;
+}
+
+.send {
+  width: 100%;
+  margin-top: 14px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  padding: 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--accent);
+}
+
+.send:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--accent);
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-left: 2px solid var(--ink);
+  border-top: 2px solid var(--ink);
+}
+
+.keys button {
+  border: 0;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: transparent;
+  padding: 24px 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.keys button:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.keys button:active {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.urlrow {
+  display: flex;
+}
+
+.urlrow input {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid var(--ink);
+  border-right: 0;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  background: transparent;
+}
+
+.urlrow input:focus {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--accent);
+}
+
+.urlrow button {
+  border: 2px solid var(--ink);
+  background: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0 20px;
+  cursor: pointer;
+}
+
+.urlrow button:active {
+  transform: translate(1px, 1px);
+}
+
+.status {
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}

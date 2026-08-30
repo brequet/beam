@@ -26,34 +26,33 @@ pub async fn home(cx: &Cx) -> Result {
         signal status = "Ready.".to_owned();
 
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
-                <meta name="theme-color" content="#0f172a">
+                <meta name="theme-color" content="#fffdf5">
                 <title>"beam"</title>
                 <link rel="icon" href="/icon-192.png">
                 <link rel="manifest" href="/manifest.webmanifest">
                 <link rel="apple-touch-icon" href="/icon-192.png">
+                <link rel="stylesheet" href="/beam.css">
                 topcoat::runtime::script()
-                <style>"body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; padding: 24px 16px; min-height: 100vh; } main { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; } h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.02em; } .muted { margin: 0; color: #94a3b8; font-size: 0.9rem; } .url { margin: 0; font-size: 0.9rem; color: #94a3b8; } .url code { color: #7dd3fc; background: #1e293b; padding: 2px 8px; border-radius: 6px; } textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid #334155; border-radius: 10px; padding: 12px; font: inherit; background: #1e293b; color: #e2e8f0; } textarea:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } input { flex: 1; min-width: 0; border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; font: inherit; background: #1e293b; color: #e2e8f0; } input:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } .row { display: flex; gap: 8px; flex-wrap: wrap; } button { border: 1px solid #334155; background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 10px 16px; font: inherit; cursor: pointer; } button:hover { background: #334155; } button:active { transform: translateY(1px); } .primary { flex: 1; background: #0ea5e9; border-color: #0ea5e9; color: #082f49; font-weight: 600; } .primary:hover { background: #38bdf8; } .status { margin: 4px 0 0; min-height: 1.2em; color: #94a3b8; font-size: 0.9rem; }"</style>
             </head>
             <body>
-                <main>
-                    <h1>"beam"</h1>
-                    <p class="muted">"Type below and send it to the focused window on the host."</p>
-                    <p class="url">"Open from any device on the Wi-Fi: " <code>(url)</code></p>
-
-                    <textarea
-                        rows="6"
-                        placeholder="Type or paste text, then press Send Text."
-                        :value=$(text.get())
-                        @input=$(|e: Event| text.set(e.target.value))
-                    ></textarea>
-
-                    <div class="row">
+                <header class="topbar">
+                    <b>"BEAM / REMOTE INPUT"</b>
+                    <span class="mono">(url)</span>
+                </header>
+                <div class="blocks">
+                    <section class="b-text">
+                        <span class="tag">"01 — Text"</span>
+                        <textarea
+                            placeholder="Type or paste text…"
+                            :value=$(text.get())
+                            @input=$(|e: Event| text.set(e.target.value))
+                        ></textarea>
                         <button
-                            class="primary"
+                            class="send"
                             @click=$(async |_e| {
                                 let outcome = send_text(text.get()).await;
                                 if outcome.is_ok() {
@@ -65,46 +64,52 @@ pub async fn home(cx: &Cx) -> Result {
                                     outcome.err().unwrap()
                                 });
                             })
-                        >"Send Text"</button>
-                    </div>
-
-                    <div class="row">
-                        <button @click=$(async |_e| {
-                            let outcome = press_key("enter".to_owned()).await;
-                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                        })>"Enter"</button>
-                        <button @click=$(async |_e| {
-                            let outcome = press_key("backspace".to_owned()).await;
-                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                        })>"Backspace"</button>
-                        <button @click=$(async |_e| {
-                            let outcome = press_key("tab".to_owned()).await;
-                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                        })>"Tab"</button>
-                        <button @click=$(async |_e| {
-                            let outcome = press_key("space".to_owned()).await;
-                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                        })>"Space"</button>
-                    </div>
-
-                    <div class="row">
-                        <input
-                            type="url"
-                            placeholder="https://example.com"
-                            :value=$(url_text.get())
-                            @input=$(|e: Event| url_text.set(e.target.value))
-                        >
-                        <button @click=$(async |_e| {
-                            let outcome = open_url(url_text.get()).await;
-                            if outcome.is_ok() {
-                                url_text.set("".to_owned());
-                            }
-                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
-                        })>"Open"</button>
-                    </div>
-
-                    <p class="status">$(status.get())</p>
-                </main>
+                        >"Send text"</button>
+                    </section>
+                    <section>
+                        <span class="tag">"02 — Keys"</span>
+                        <div class="keys">
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("enter".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Enter"</button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("space".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Space"</button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("backspace".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Bksp"</button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("tab".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Tab"</button>
+                        </div>
+                    </section>
+                    <section>
+                        <span class="tag">"03 — Open URL"</span>
+                        <div class="urlrow">
+                            <input
+                                type="url"
+                                placeholder="https://…"
+                                :value=$(url_text.get())
+                                @input=$(|e: Event| url_text.set(e.target.value))
+                            >
+                            <button @click=$(async |_e| {
+                                let outcome = open_url(url_text.get()).await;
+                                if outcome.is_ok() {
+                                    url_text.set("".to_owned());
+                                }
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Open"</button>
+                        </div>
+                    </section>
+                    <section class="status">
+                        <span>"STATUS"</span>
+                        <span>$(status.get())</span>
+                    </section>
+                </div>
             </body>
         </html>
     }
