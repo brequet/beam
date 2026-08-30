@@ -20,6 +20,8 @@ src/ui.rs     Topcoat view! page + send_text / press_key procedures
 The web layer only knows the `InputService` trait, so development and tests
 never trigger real keystrokes: run with `--mock` and events are just logged.
 
+Follow-up ideas and the raw backlog live in [docs/IDEAS.md](docs/IDEAS.md).
+
 ## Build & run
 
 Prerequisites: Rust 1.85+ and the Topcoat CLI (used once to bundle the
