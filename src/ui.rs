@@ -67,7 +67,41 @@ pub async fn home(cx: &Cx) -> Result {
                         >"Send text"</button>
                     </section>
                     <section>
-                        <span class="tag">"02 — Keys"</span>
+                        <span class="tag">"02 — Remote"</span>
+                        <div class="remote">
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("j".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"−10s"<small>"j"</small></button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("media-play-pause".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Play/Pause"<small>"media key"</small></button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("l".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"+10s"<small>"l"</small></button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("volume-down".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Vol −"<small>"media key"</small></button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("volume-mute".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Mute"<small>"media key"</small></button>
+                            <button @click=$(async |_e| {
+                                let outcome = press_key("volume-up".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Vol +"<small>"media key"</small></button>
+                            <button class="wide" @click=$(async |_e| {
+                                let outcome = press_key("f".to_owned()).await;
+                                status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                            })>"Fullscreen"<small>"f"</small></button>
+                        </div>
+                        <p class="remote-hint">"f · j · l go to the host's focused window — click the video first."</p>
+                    </section>
+                    <section>
+                        <span class="tag">"03 — Keys"</span>
                         <div class="keys">
                             <button @click=$(async |_e| {
                                 let outcome = press_key("enter".to_owned()).await;
@@ -88,7 +122,7 @@ pub async fn home(cx: &Cx) -> Result {
                         </div>
                     </section>
                     <section>
-                        <span class="tag">"03 — Open URL"</span>
+                        <span class="tag">"04 — Open URL"</span>
                         <div class="urlrow">
                             <input
                                 type="url"

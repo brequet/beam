@@ -157,6 +157,69 @@ textarea::placeholder {
   color: var(--ink);
 }
 
+.remote {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-left: 2px solid var(--ink);
+  border-top: 2px solid var(--ink);
+}
+
+.remote button {
+  border: 0;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: transparent;
+  padding: 18px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.remote button small {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  color: #9b9788;
+}
+
+.remote button:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.remote button:hover small {
+  color: #fff;
+}
+
+.remote button:active {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.remote button:active small {
+  color: var(--ink);
+}
+
+.remote .wide {
+  grid-column: 1 / -1;
+}
+
+.remote-hint {
+  margin: 12px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: #9b9788;
+}
+
 .urlrow {
   display: flex;
 }

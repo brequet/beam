@@ -12,13 +12,16 @@ Beam must run inside the **interactive user session** to inject keystrokes, so
 a classic Windows Service (session 0) cannot work. The correct pattern is
 *logon autostart in the user session*:
 
-- **Windows**: Task Scheduler logon trigger (`schtasks /create /tn beam /sc onlogon /tr "<path>\beam.exe"`) or a Startup-folder shortcut.
+- **Windows**: done — `beam install` / `beam uninstall` register a Task
+  Scheduler logon task scoped to the current user (no admin needed;
+  `schtasks /sc onlogon` was avoided because it requires elevation). The task
+  runs `beam --hidden`, has no execution-time limit, survives on battery, and
+  refuses duplicate instances; status goes to `%LOCALAPPDATA%\beam\beam.log`.
 - **macOS**: `LaunchAgent` plist in `~/Library/LaunchAgents` with `RunAtLoad`.
 - **Linux**: systemd user unit wanted by `graphical-session.target`.
 
-Nice version: a `beam install` / `beam uninstall` subcommand that registers
-the platform-specific task idempotently, plus a tray icon showing the URL and
-a "quit" action.
+Remaining for the nice version: a tray icon showing the URL and a "quit"
+action.
 
 ### Opt-in pairing token — M
 beam is unauthenticated by design (see README security note), which is only
@@ -60,9 +63,15 @@ Arrows + `Enter`/`Esc`/`B`/`F5` + a big "black screen" button. A second UI
 tab that turns any phone into a clicker for slides. Probably beam's best
 single-purpose use case.
 
-### Media & volume keys — S (after combos)
-Play/pause, next/prev, volume up/down/mute via enigo's media key variants
-(verify exact `Key` names at implementation time). Four-row tile grid, done.
+### Media remote — v1 shipped
+"02 — Remote" section: outcome-labeled buttons with key hints. Play/Pause,
+Vol−/+, Mute send **global media keys** (`MediaPlayPause`, `VolumeUp/Down/Mute`)
+that work regardless of host focus; Fullscreen/−10s/+10s send **real letter
+keys** (`f`, `j`, `l` — enigo VK variants, not `.text()` Unicode injection,
+which is why app shortcuts never fired). Letter keys need the host browser
+focused; a static hint line says so. Lesson: neither needs combos, so
+"after combos" was the wrong dependency. Leftovers: next/prev track, arrow
+cluster — add only when needed.
 
 ### Host dashboard — M
 A `#[shard]`-powered info panel (or `/` section): hostname, OS, uptime, and
@@ -70,6 +79,9 @@ the **current focused window title** (platform-specific; on Windows via
 `GetForegroundWindow` + `GetWindowTextW` from the `windows` crate already in
 the dependency tree). Optionally a recent-injection log (ring buffer of the
 last N events). Also a natural place to surface "input backend: enigo/mock".
+This is also where **live focus awareness** for the remote belongs: show the
+focused window title so the UI can confirm "f will land in YouTube" (or warn
+that focus is elsewhere) instead of relying on the static hint line.
 
 ### Live typing mode — L
 Continuous typing without pressing Send: stream input events (small batches,
