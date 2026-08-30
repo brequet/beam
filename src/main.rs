@@ -136,6 +136,7 @@ async fn main() -> anyhow::Result<()> {
         .page(ui::home)
         .procedure(ui::send_text)
         .procedure(ui::press_key)
+        .procedure(ui::open_url)
         .route(StaticRoute::new(
             "/manifest.webmanifest",
             include_bytes!("../assets/manifest.json"),

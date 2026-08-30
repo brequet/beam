@@ -49,12 +49,6 @@ disable page sleep while the tab is open (`screen wake lock API`) so the
 
 ## Features
 
-### Open link in default browser — S
-Quick-action: paste/typing a URL on the phone opens it on the host.
-Sketch: new `open_url` procedure using the `open` crate; **validate the scheme
-allow-list (`http`/`https`) before invoking** so a spoofed procedure call can't
-launch arbitrary executables. UI: one input row + "Open" button.
-
 ### More keys & combos — M
 Arrow keys, `Esc`, `Home/End`, `PageUp/Down`, `F1–F12`, and modifier combos
 (`Alt+Tab`, `Ctrl+C`, `Win`). Domain change in `src/input.rs`: `KeyName` grows,

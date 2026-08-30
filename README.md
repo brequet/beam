@@ -14,7 +14,7 @@ injection).
 ```
 src/main.rs   CLI (clap), router wiring, LAN IP detection
 src/input.rs  InputService abstraction: OsInput (enigo) + MockInput (dev/tests)
-src/ui.rs     Topcoat view! page + send_text / press_key procedures
+src/ui.rs     Topcoat view! page + send_text / press_key / open_url procedures
 ```
 
 The web layer only knows the `InputService` trait, so development and tests
@@ -78,3 +78,7 @@ There is no authentication by design: **anything on the network that can
 reach the port can type into your machine.** Keep it on a trusted Wi-Fi, bind
 to a specific interface with `--host` if needed, and stop the server when you
 are done.
+
+The `open_url` quick-action can additionally make the host open http(s) links
+in its default browser; the scheme allow-list (`http`/`https` only) is
+validated before the opener runs, so nothing else can be launched.

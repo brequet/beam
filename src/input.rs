@@ -51,6 +51,8 @@ pub enum InputError {
     Init(String),
     #[error("could not inject input into the host OS: {0}")]
     Inject(String),
+    #[error("could not open the URL on the host: {0}")]
+    Open(String),
 }
 
 /// Abstraction over host-side input generation.
@@ -63,6 +65,12 @@ pub trait InputService: Send + Sync {
 
     /// Presses a single special key.
     fn press_key(&self, key: KeyName) -> Result<(), InputError>;
+
+    /// Opens an http(s) URL in the host's default browser.
+    ///
+    /// Not keystroke injection, but kept on this service so the mock backend
+    /// can record it and tests never launch anything on the host OS.
+    fn open_url(&self, url: &str) -> Result<(), InputError>;
 }
 
 /// Real backend backed by [`enigo`], injecting into the focused window.
@@ -96,6 +104,10 @@ impl InputService for OsInput {
             .key(key.to_enigo(), Direction::Click)
             .map_err(|error| InputError::Inject(error.to_string()))
     }
+
+    fn open_url(&self, url: &str) -> Result<(), InputError> {
+        open::that_detached(url).map_err(|error| InputError::Open(error.to_string()))
+    }
 }
 
 /// Dev/test backend that records events instead of touching the host OS.
@@ -124,6 +136,11 @@ impl InputService for MockInput {
         self.record(format!("key {}", key.label()));
         Ok(())
     }
+
+    fn open_url(&self, url: &str) -> Result<(), InputError> {
+        self.record(format!("open url {url:?}"));
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -146,9 +163,14 @@ mod tests {
         let input = MockInput::default();
         input.press_key(KeyName::Enter).unwrap();
         input.send_text("hello").unwrap();
+        input.open_url("https://example.com").unwrap();
         assert_eq!(
             *input.events.lock().unwrap(),
-            vec!["key Enter".to_owned(), "text \"hello\"".to_owned()]
+            vec![
+                "key Enter".to_owned(),
+                "text \"hello\"".to_owned(),
+                "open url \"https://example.com\"".to_owned()
+            ]
         );
     }
 }

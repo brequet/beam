@@ -22,6 +22,7 @@ pub async fn home(cx: &Cx) -> Result {
 
     view! {
         signal text = String::new();
+        signal url_text = String::new();
         signal status = "Ready.".to_owned();
 
         <!DOCTYPE html>
@@ -35,7 +36,7 @@ pub async fn home(cx: &Cx) -> Result {
                 <link rel="manifest" href="/manifest.webmanifest">
                 <link rel="apple-touch-icon" href="/icon-192.png">
                 topcoat::runtime::script()
-                <style>"body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; padding: 24px 16px; min-height: 100vh; } main { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; } h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.02em; } .muted { margin: 0; color: #94a3b8; font-size: 0.9rem; } .url { margin: 0; font-size: 0.9rem; color: #94a3b8; } .url code { color: #7dd3fc; background: #1e293b; padding: 2px 8px; border-radius: 6px; } textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid #334155; border-radius: 10px; padding: 12px; font: inherit; background: #1e293b; color: #e2e8f0; } textarea:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } .row { display: flex; gap: 8px; flex-wrap: wrap; } button { border: 1px solid #334155; background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 10px 16px; font: inherit; cursor: pointer; } button:hover { background: #334155; } button:active { transform: translateY(1px); } .primary { flex: 1; background: #0ea5e9; border-color: #0ea5e9; color: #082f49; font-weight: 600; } .primary:hover { background: #38bdf8; } .status { margin: 4px 0 0; min-height: 1.2em; color: #94a3b8; font-size: 0.9rem; }"</style>
+                <style>"body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; padding: 24px 16px; min-height: 100vh; } main { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; } h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.02em; } .muted { margin: 0; color: #94a3b8; font-size: 0.9rem; } .url { margin: 0; font-size: 0.9rem; color: #94a3b8; } .url code { color: #7dd3fc; background: #1e293b; padding: 2px 8px; border-radius: 6px; } textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid #334155; border-radius: 10px; padding: 12px; font: inherit; background: #1e293b; color: #e2e8f0; } textarea:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } input { flex: 1; min-width: 0; border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; font: inherit; background: #1e293b; color: #e2e8f0; } input:focus { outline: 2px solid #38bdf8; outline-offset: 1px; border-color: transparent; } .row { display: flex; gap: 8px; flex-wrap: wrap; } button { border: 1px solid #334155; background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 10px 16px; font: inherit; cursor: pointer; } button:hover { background: #334155; } button:active { transform: translateY(1px); } .primary { flex: 1; background: #0ea5e9; border-color: #0ea5e9; color: #082f49; font-weight: 600; } .primary:hover { background: #38bdf8; } .status { margin: 4px 0 0; min-height: 1.2em; color: #94a3b8; font-size: 0.9rem; }"</style>
             </head>
             <body>
                 <main>
@@ -86,6 +87,22 @@ pub async fn home(cx: &Cx) -> Result {
                         })>"Space"</button>
                     </div>
 
+                    <div class="row">
+                        <input
+                            type="url"
+                            placeholder="https://example.com"
+                            :value=$(url_text.get())
+                            @input=$(|e: Event| url_text.set(e.target.value))
+                        >
+                        <button @click=$(async |_e| {
+                            let outcome = open_url(url_text.get()).await;
+                            if outcome.is_ok() {
+                                url_text.set("".to_owned());
+                            }
+                            status.set(if outcome.is_ok() { outcome.unwrap() } else { outcome.err().unwrap() });
+                        })>"Open"</button>
+                    </div>
+
                     <p class="status">$(status.get())</p>
                 </main>
             </body>
@@ -120,5 +137,76 @@ pub async fn press_key(cx: &Cx, name: String) -> Result<Result<String, String>> 
     match input.press_key(key) {
         Ok(()) => Ok(Ok(format!("Sent {}.", key.label()))),
         Err(error) => Ok(Err(error.to_string())),
+    }
+}
+
+/// Opens an http(s) URL in the host's default browser.
+///
+/// The scheme allow-list runs before the service call, so a tampered or
+/// spoofed procedure call can never launch anything but a web link.
+#[procedure]
+pub async fn open_url(cx: &Cx, raw: String) -> Result<Result<String, String>> {
+    let url = match validate_open_url(&raw) {
+        Ok(url) => url,
+        Err(message) => return Ok(Err(message)),
+    };
+
+    let input: &Arc<dyn InputService> = app_context(cx);
+    match input.open_url(&url) {
+        Ok(()) => Ok(Ok(format!("Opened {url} on the host."))),
+        Err(error) => Ok(Err(error.to_string())),
+    }
+}
+
+/// Only http/https may be opened, with no embedded whitespace or control
+/// characters (defense in depth against launcher argument games).
+fn validate_open_url(raw: &str) -> Result<String, String> {
+    let url = raw.trim();
+    if url.is_empty() {
+        return Err("no URL to open".to_owned());
+    }
+
+    let lowered = url.to_ascii_lowercase();
+    if !(lowered.starts_with("http://") || lowered.starts_with("https://")) {
+        return Err("only http and https URLs can be opened".to_owned());
+    }
+
+    if url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err("URL contains invalid characters".to_owned());
+    }
+
+    Ok(url.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn open_url_accepts_trimmed_http_and_https() {
+        assert_eq!(
+            validate_open_url("  https://example.com "),
+            Ok("https://example.com".to_owned())
+        );
+        assert_eq!(
+            validate_open_url("HTTP://example.com"),
+            Ok("HTTP://example.com".to_owned())
+        );
+    }
+
+    #[test]
+    fn open_url_rejects_everything_but_web_links() {
+        for raw in [
+            "",
+            "   ",
+            "example.com",
+            "ftp://example.com/file",
+            "file:///C:/Windows/System32/calc.exe",
+            "javascript:alert(1)",
+            "https://example.com/a b",
+            "http://example.com/\nfile://x",
+        ] {
+            assert!(validate_open_url(raw).is_err(), "must reject {raw:?}");
+        }
     }
 }
