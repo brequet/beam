@@ -9,7 +9,7 @@ use topcoat::{
 };
 
 use crate::input::{InputError, InputService};
-use crate::keys::{Key, KeyKind};
+use crate::keys::{Key, KeyKind, REMOTE, TYPING};
 
 /// Shareable host identity, registered as app context and rendered on the page.
 pub struct HostInfo {
@@ -19,22 +19,6 @@ pub struct HostInfo {
     /// compares it against `/healthz` to notice a swapped binary.
     pub build: String,
 }
-
-/// Which Keys the page shows in "02 — Remote", in display order.
-///
-/// The page owns placement; the key catalogue owns what the keys are.
-const REMOTE_KEYS: &[Key] = &[
-    Key::J,
-    Key::MediaPlayPause,
-    Key::L,
-    Key::VolumeDown,
-    Key::VolumeMute,
-    Key::VolumeUp,
-    Key::F,
-];
-
-/// Which Keys the page shows in "03 — Keys", in display order.
-const TYPING_KEYS: &[Key] = &[Key::Enter, Key::Space, Key::Backspace, Key::Tab];
 
 /// The small hint under a key button, derived from the Key's kind: media
 /// keys show "media key", letter keys show their wire name, typing keys
@@ -114,10 +98,10 @@ pub async fn home(cx: &Cx) -> Result {
                     <section>
                         <span class="tag">"02 — Remote"</span>
                         <div class="remote">
-                            for &key in REMOTE_KEYS {
-                                let wire = key.wire_name();
+                            for def in REMOTE {
+                                let wire = def.wire_name;
                                 <button
-                                    class=(if key == Key::F { Some("wide") } else { None })
+                                    class=(if def.key == Key::F { Some("wide") } else { None })
                                     @click=$(async move |_e| {
                                         let outcome = press_key(wire.to_owned()).await;
                                         status.set(if outcome.is_ok() {
@@ -127,8 +111,8 @@ pub async fn home(cx: &Cx) -> Result {
                                         });
                                     })
                                 >
-                                    (key.label())
-                                    match button_hint(key) {
+                                    (def.label)
+                                    match button_hint(def.key) {
                                         Some(hint) => <small>(hint)</small>,
                                         None => {}
                                     }
@@ -140,8 +124,8 @@ pub async fn home(cx: &Cx) -> Result {
                     <section>
                         <span class="tag">"03 — Keys"</span>
                         <div class="keys">
-                            for &key in TYPING_KEYS {
-                                let wire = key.wire_name();
+                            for def in TYPING {
+                                let wire = def.wire_name;
                                 <button
                                     @click=$(async move |_e| {
                                         let outcome = press_key(wire.to_owned()).await;
@@ -151,7 +135,7 @@ pub async fn home(cx: &Cx) -> Result {
                                             outcome.err().unwrap()
                                         });
                                     })
-                                >(key.label())</button>
+                                >(def.label)</button>
                             }
                         </div>
                     </section>

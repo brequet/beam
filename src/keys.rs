@@ -1,7 +1,8 @@
 //! The key catalogue: every [`Key`] a device can send to the host, with its
-//! wire name, display label, and kind. This module is the single source of
-//! truth for what the page renders and what `press_key` accepts; the OS
-//! injection mapping stays with the input backend in `input.rs`.
+//! wire name, display label, and kind, organized into the pads the page
+//! renders. This module is the single source of truth for what the page
+//! renders and what `press_key` accepts; the OS injection mapping stays with
+//! the input backend in `input.rs`.
 
 /// A single discrete keypress a device can send to the host, chosen from
 /// the fixed set beam supports — media keys, letter keys, and typing keys
@@ -45,8 +46,15 @@ pub struct KeyDef {
     pub kind: KeyKind,
 }
 
-/// The key catalogue. One entry per Key — enforced by the tests below.
-pub const CATALOGUE: &[KeyDef] = &[
+/// The Keys on the remote pad, in display order. The catalogue owns
+/// membership and order; the page owns layout.
+pub const REMOTE: &[KeyDef] = &[
+    KeyDef {
+        key: Key::J,
+        wire_name: "j",
+        label: "−10s",
+        kind: KeyKind::Letter,
+    },
     KeyDef {
         key: Key::MediaPlayPause,
         wire_name: "media-play-pause",
@@ -54,10 +62,10 @@ pub const CATALOGUE: &[KeyDef] = &[
         kind: KeyKind::Media,
     },
     KeyDef {
-        key: Key::VolumeUp,
-        wire_name: "volume-up",
-        label: "Vol +",
-        kind: KeyKind::Media,
+        key: Key::L,
+        wire_name: "l",
+        label: "+10s",
+        kind: KeyKind::Letter,
     },
     KeyDef {
         key: Key::VolumeDown,
@@ -72,23 +80,21 @@ pub const CATALOGUE: &[KeyDef] = &[
         kind: KeyKind::Media,
     },
     KeyDef {
+        key: Key::VolumeUp,
+        wire_name: "volume-up",
+        label: "Vol +",
+        kind: KeyKind::Media,
+    },
+    KeyDef {
         key: Key::F,
         wire_name: "f",
         label: "Fullscreen",
         kind: KeyKind::Letter,
     },
-    KeyDef {
-        key: Key::J,
-        wire_name: "j",
-        label: "−10s",
-        kind: KeyKind::Letter,
-    },
-    KeyDef {
-        key: Key::L,
-        wire_name: "l",
-        label: "+10s",
-        kind: KeyKind::Letter,
-    },
+];
+
+/// The Keys on the typing pad, in display order.
+pub const TYPING: &[KeyDef] = &[
     KeyDef {
         key: Key::Enter,
         wire_name: "enter",
@@ -115,6 +121,9 @@ pub const CATALOGUE: &[KeyDef] = &[
     },
 ];
 
+/// Every pad, so lookups and tests can iterate the whole catalogue.
+const PADS: &[&[KeyDef]] = &[REMOTE, TYPING];
+
 impl Key {
     /// Parses a wire name into its Key.
     ///
@@ -122,15 +131,15 @@ impl Key {
     /// the complete description of what devices can send.
     pub fn from_name(name: &str) -> Option<Self> {
         let lowered = name.to_ascii_lowercase();
-        CATALOGUE
-            .iter()
+        PADS.iter()
+            .flat_map(|pad| pad.iter())
             .find(|def| def.wire_name == lowered)
             .map(|def| def.key)
     }
 
     fn def(self) -> &'static KeyDef {
-        CATALOGUE
-            .iter()
+        PADS.iter()
+            .flat_map(|pad| pad.iter())
             .find(|def| def.key == self)
             .expect("every Key has a catalogue entry")
     }
@@ -152,10 +161,10 @@ impl Key {
 mod tests {
     use super::*;
 
-    /// The tying test: every Key variant must appear in the catalogue
-    /// exactly once. Adding a variant without a catalogue entry fails here.
+    /// The tying test: every Key variant must appear on exactly one pad.
+    /// Adding a variant without a pad entry fails here.
     #[test]
-    fn every_key_appears_in_the_catalogue_exactly_once() {
+    fn every_key_appears_on_exactly_one_pad() {
         let all = [
             Key::Enter,
             Key::Backspace,
@@ -170,31 +179,39 @@ mod tests {
             Key::VolumeMute,
         ];
         for key in all {
-            let entries = CATALOGUE.iter().filter(|def| def.key == key).count();
-            assert_eq!(entries, 1, "key {:?} must have exactly one entry", key);
+            let entries = PADS
+                .iter()
+                .flat_map(|pad| pad.iter())
+                .filter(|def| def.key == key)
+                .count();
+            assert_eq!(entries, 1, "key {:?} must appear on exactly one pad", key);
         }
-        assert_eq!(CATALOGUE.len(), all.len(), "no extra catalogue entries");
+        assert_eq!(
+            PADS.iter().map(|pad| pad.len()).sum::<usize>(),
+            all.len(),
+            "no extra catalogue entries"
+        );
     }
 
     #[test]
     fn wire_names_are_unique_and_non_empty() {
-        for (i, def) in CATALOGUE.iter().enumerate() {
-            assert!(!def.wire_name.is_empty());
-            assert_eq!(
-                CATALOGUE[i + 1..]
-                    .iter()
-                    .find(|other| other.wire_name == def.wire_name)
-                    .map(|dup| dup.wire_name),
-                None,
-                "duplicate wire name: {}",
-                def.wire_name
+        let names: Vec<&str> = PADS
+            .iter()
+            .flat_map(|pad| pad.iter())
+            .map(|def| def.wire_name)
+            .collect();
+        for (i, name) in names.iter().enumerate() {
+            assert!(!name.is_empty());
+            assert!(
+                !names[i + 1..].contains(name),
+                "duplicate wire name: {name}"
             );
         }
     }
 
     #[test]
     fn wire_names_round_trip_through_from_name() {
-        for def in CATALOGUE {
+        for def in PADS.iter().flat_map(|pad| pad.iter()) {
             assert_eq!(Key::from_name(def.wire_name), Some(def.key));
             assert_eq!(def.key.wire_name(), def.wire_name);
             assert_eq!(def.key.label(), def.label);
