@@ -152,6 +152,10 @@ case needs no special casing.
   (`TimelinePropertiesChanged`, `MediaPropertiesChanged`) but position must
   be extrapolated from `LastUpdatedTime` between events; decide how the page
   learns (websocket push vs 1 Hz pull of a session snapshot).
+- Verdict: **shelved** — the public API is read-only for external
+  controllers (no seek, no commands), so it added little over existing media
+  keys; CDP supersedes it for browsers. Only revisit for non-browser media
+  (Spotify desktop, VLC).
 
 ### Browser tab switcher (UIA, L3) — L
 A separate feature, not keystrokes: enumerate the open tabs of running
@@ -167,13 +171,15 @@ by default since 138). Chrome/Brave first, Firefox second.
   standard workaround — synthesizing a harmless key first — fits enigo).
 - Watch out: walking UIA trees is heavier than L0/L2 and can be slow with
   many tabs; likely on-demand refresh, not streaming.
+- Verdict: **demoted behind L4** — CDP lists/activates tabs better for
+  Chromium; UIA survives only as the Firefox fallback.
 
-### Deep browser integration (CDP, L4) — parked
-Keep in mind, not scheduled: launching Chromium with
-`--remote-debugging-port` unlocks full automation — list/activate/navigate
-tabs, evaluate JS, click DOM buttons like Netflix's "Skip Intro" (which has
-no keyboard shortcut). Heaviest layer, and it needs the browser relaunched
-with a flag, so it is a deliberate opt-in. Revisit when L3 feels limiting.
+### Deep browser integration (CDP, L4) — promoted → docs/HANDOFF-BROWSER-MANAGER.md
+Validated live on the host: Brave honors `--remote-debugging-port` on its
+default profile (the Chromium-136 hardening is Google-branding-gated), and a
+browser-manager onboarding — detect → propose → clean restart with the flag —
+works entirely in the user session, no elevation. Full design, verified facts,
+restart-flow gotchas and build order live in the handoff doc.
 
 ## Explicitly out of scope (for now)
 
