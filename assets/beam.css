@@ -200,7 +200,7 @@ textarea::placeholder {
 
 .keys {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-left: 2px solid var(--ink);
   border-top: 2px solid var(--ink);
 }

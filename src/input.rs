@@ -59,6 +59,7 @@ fn to_enigo(key: Key) -> EnigoKey {
         Key::Backspace => EnigoKey::Backspace,
         Key::Tab => EnigoKey::Tab,
         Key::Space => EnigoKey::Space,
+        Key::Escape => EnigoKey::Escape,
         #[cfg(target_os = "windows")]
         Key::F => EnigoKey::F,
         #[cfg(target_os = "windows")]

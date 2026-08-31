@@ -13,6 +13,7 @@ pub enum Key {
     Backspace,
     Tab,
     Space,
+    Escape,
     F,
     J,
     L,
@@ -119,6 +120,12 @@ pub const TYPING: &[KeyDef] = &[
         label: "Tab",
         kind: KeyKind::Typing,
     },
+    KeyDef {
+        key: Key::Escape,
+        wire_name: "esc",
+        label: "Esc",
+        kind: KeyKind::Typing,
+    },
 ];
 
 /// Every pad, so lookups and tests can iterate the whole catalogue.
@@ -170,6 +177,7 @@ mod tests {
             Key::Backspace,
             Key::Tab,
             Key::Space,
+            Key::Escape,
             Key::F,
             Key::J,
             Key::L,
@@ -225,7 +233,7 @@ mod tests {
             Key::from_name("Media-Play-Pause"),
             Some(Key::MediaPlayPause)
         );
-        for rejected in ["", "f13", "ctrl", "return", "esc", "volume_up"] {
+        for rejected in ["", "f13", "ctrl", "return", "escape", "volume_up"] {
             assert_eq!(Key::from_name(rejected), None, "must reject {rejected:?}");
         }
     }
