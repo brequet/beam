@@ -84,10 +84,12 @@
     if (!document.hidden) scheduleProbe(0);
   });
 
-  // Focus awareness: the host's focused window, polled while the tab is
-  // visible. On failure the line just goes stale — the health script owns
-  // the offline state, and the next successful poll catches up.
+  // Host context: focused window + browser state, one poll for both lines
+  // (the /focus response carries them in fixed order, staged on the way to a
+  // /context payload). On failure the lines just go stale — the health script
+  // owns the offline state, and the next successful poll catches up.
   var focusText = document.getElementById("focus-text");
+  var browserText = document.getElementById("browser-text");
   if (focusText !== null) {
     var refreshFocus = function () {
       if (document.hidden) return;
@@ -96,8 +98,10 @@
           if (!response.ok) throw new Error("focus " + response.status);
           return response.text();
         })
-        .then(function (line) {
-          focusText.textContent = line;
+        .then(function (text) {
+          var lines = text.split("\n");
+          focusText.textContent = lines[0] || "";
+          if (browserText !== null) browserText.textContent = lines[1] || "";
         })
         .catch(function () {});
     };

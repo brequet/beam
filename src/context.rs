@@ -39,15 +39,15 @@ pub struct OsContext;
 
 #[cfg(target_os = "windows")]
 mod os {
-    use windows::core::PWSTR;
     use windows::Win32::Foundation::{CloseHandle, HWND};
     use windows::Win32::System::Threading::{
-        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
-        PROCESS_QUERY_LIMITED_INFORMATION,
+        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        QueryFullProcessImageNameW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
     };
+    use windows::core::PWSTR;
 
     use super::{ContextError, FocusInfo};
 
@@ -97,14 +97,21 @@ mod os {
         let mut buffer = [0u16; 1024];
         let mut len = buffer.len() as u32;
         let image = unsafe {
-            QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buffer.as_mut_ptr()), &mut len)
+            QueryFullProcessImageNameW(
+                handle,
+                PROCESS_NAME_WIN32,
+                PWSTR(buffer.as_mut_ptr()),
+                &mut len,
+            )
         };
         let _ = unsafe { CloseHandle(handle) };
 
         let image = image
             .map(|()| String::from_utf16_lossy(&buffer[..len as usize]))
             .map_err(|error| {
-                ContextError::Read(format!("could not read the focused process's image path: {error}"))
+                ContextError::Read(format!(
+                    "could not read the focused process's image path: {error}"
+                ))
             })?;
 
         std::path::Path::new(&image)

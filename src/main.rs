@@ -1,4 +1,5 @@
 mod autostart;
+mod browsers;
 mod context;
 mod input;
 mod keys;
@@ -20,6 +21,7 @@ use topcoat::router::{
 };
 use topcoat::runtime::{Procedure, RouterBuilderProcedureExt};
 
+use crate::browsers::{BrowserService, MockBrowser, OsBrowser, browser_line};
 use crate::context::{ContextService, MockContext, OsContext, focus_line};
 use crate::input::{InputService, MockInput, OsInput};
 use crate::ui::HostInfo;
@@ -91,6 +93,8 @@ fn build_id() -> String {
     ui::send_text.id().hash(&mut hasher);
     ui::press_key.id().hash(&mut hasher);
     ui::open_url.id().hash(&mut hasher);
+    ui::start_browser.id().hash(&mut hasher);
+    ui::restart_browser.id().hash(&mut hasher);
     format!("{:016x}", hasher.finish())
 }
 
@@ -215,11 +219,13 @@ impl Route for HealthRoute {
     }
 }
 
-/// A `Route` serving the host's focused window as one plain-text line.
+/// A `Route` serving ambient host state as plain-text lines.
 ///
-/// The page's focus script polls it while the tab is visible. It is a read
-/// (like `/healthz`), not a procedure: ambient host state the page refreshes
-/// on its own, not an action.
+/// One line per concern in fixed order — the focused window, then the
+/// browser/CDP state — refreshed by the page's visibility-gated poller in a
+/// single request. It is a read (like `/healthz`), not a procedure: ambient
+/// host state the page refreshes on its own, not an action. Staged on the
+/// way to a single `/context` payload once more concerns arrive.
 struct FocusRoute {
     id: RouteId,
     path: PathBuf,
@@ -250,8 +256,13 @@ impl Route for FocusRoute {
     fn handle<'cx>(&'cx self, cx: &'cx Cx, _body: Body) -> RouteFuture<'cx> {
         Box::pin(async move {
             let context: &Arc<dyn ContextService> = app_context(cx);
-            let line = focus_line(context.focused_window());
-            let mut response = Response::new(Body::from(line));
+            let browsers: &Arc<dyn BrowserService> = app_context(cx);
+            let body = format!(
+                "{}\n{}",
+                focus_line(context.focused_window()),
+                browser_line(browsers.detect()),
+            );
+            let mut response = Response::new(Body::from(body));
             let headers = response.headers_mut();
             headers.insert(
                 header::CONTENT_TYPE,
@@ -306,6 +317,12 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         Arc::new(OsContext)
     };
 
+    let browsers: Arc<dyn BrowserService> = if args.mock {
+        Arc::new(MockBrowser::new())
+    } else {
+        Arc::new(OsBrowser)
+    };
+
     let lan_ip = detect_lan_ip()
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "localhost".to_owned());
@@ -325,6 +342,8 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .procedure(ui::send_text)
         .procedure(ui::press_key)
         .procedure(ui::open_url)
+        .procedure(ui::start_browser)
+        .procedure(ui::restart_browser)
         .route(StaticRoute::new(
             "/beam.css",
             include_bytes!("../assets/beam.css"),
@@ -354,6 +373,7 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .route(FocusRoute::new())
         .app_context(input)
         .app_context(context)
+        .app_context(browsers)
         .app_context(HostInfo {
             hostname,
             url: url.clone(),

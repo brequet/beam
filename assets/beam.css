@@ -331,3 +331,42 @@ textarea::placeholder {
   justify-content: space-between;
   gap: 12px;
 }
+
+.browser-action {
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--accent);
+  padding: 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.browser-action:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.browser-action small {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.08em;
+}
+
+.browser-note {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #9b9788;
+}

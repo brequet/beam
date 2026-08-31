@@ -8,6 +8,9 @@ use topcoat::{
     view::view,
 };
 
+use crate::browsers::{
+    BrowserDef, BrowserService, OnboardingAction, browser_line, onboarding_action,
+};
 use crate::context::{ContextService, focus_line};
 use crate::input::{InputError, InputService};
 use crate::keys::{Key, KeyKind, REMOTE, TYPING};
@@ -47,6 +50,11 @@ pub async fn home(cx: &Cx) -> Result {
     let context: &Arc<dyn ContextService> = app_context(cx);
     let focus = focus_line(context.focused_window());
 
+    let browsers: &Arc<dyn BrowserService> = app_context(cx);
+    let detected = browsers.detect();
+    let action = onboarding_action(&detected);
+    let browser = browser_line(detected);
+
     view! {
         signal text = String::new();
         signal url_text = String::new();
@@ -79,6 +87,10 @@ pub async fn home(cx: &Cx) -> Result {
                 <p class="focus-line">
                     <b>"FOCUS"</b>
                     <span id="focus-text">(focus)</span>
+                </p>
+                <p class="focus-line">
+                    <b>"BROWSER"</b>
+                    <span id="browser-text">(browser)</span>
                 </p>
                 <div class="blocks">
                     <section class="b-text">
@@ -164,6 +176,38 @@ pub async fn home(cx: &Cx) -> Result {
                             })>"Open"</button>
                         </div>
                     </section>
+                    <section>
+                        <span class="tag">"05 — Browser"</span>
+                        match action {
+                            OnboardingAction::Start { process } => <button
+                                class="browser-action"
+                                @click=$(async move |_e| {
+                                    let outcome = start_browser(process.to_owned()).await;
+                                    status.set(if outcome.is_ok() {
+                                        outcome.unwrap()
+                                    } else {
+                                        outcome.err().unwrap()
+                                    });
+                                })
+                            >"Start with remote control"</button>,
+                            OnboardingAction::Restart { process, warning } => <button
+                                class="browser-action"
+                                @click=$(async move |_e| {
+                                    let outcome = restart_browser(process.to_owned()).await;
+                                    status.set(if outcome.is_ok() {
+                                        outcome.unwrap()
+                                    } else {
+                                        outcome.err().unwrap()
+                                    });
+                                })
+                            >
+                                "Restart with remote control"
+                                <small>(warning)</small>
+                            </button>,
+                            OnboardingAction::Active => <p class="browser-note">"Remote control is active."</p>,
+                            OnboardingAction::Unavailable => <p class="browser-note">"Browser control is unavailable."</p>,
+                        }
+                    </section>
                     <section class="status">
                         <span>"STATUS"</span>
                         <span>$(status.get())</span>
@@ -233,6 +277,43 @@ pub async fn open_url(cx: &Cx, raw: String) -> Result<Result<String, String>> {
 
     let input: &Arc<dyn InputService> = app_context(cx);
     backend_outcome(format!("Opened {url} on the host."), input.open_url(&url))
+}
+
+/// Cold-starts a known browser with beam's remote-control port.
+///
+/// The catalogue is the complete description of what can be started;
+/// anything else is rejected here. The button is the consent, and a stale
+/// click gets an honest refusal instead of a surprise launch.
+#[procedure]
+pub async fn start_browser(cx: &Cx, name: String) -> Result<Result<String, String>> {
+    let Some(def) = BrowserDef::by_process(&name) else {
+        return rejected(format!("unsupported browser: {name}"));
+    };
+
+    let browsers: &Arc<dyn BrowserService> = app_context(cx);
+    Ok(match browsers.start(def) {
+        Ok(info) => Ok(info.display()),
+        Err(error) => Err(error.to_string()),
+    })
+}
+
+/// Restarts a known browser with beam's remote-control port: graceful
+/// close, force-stop of leftovers, cold launch, verified endpoint.
+///
+/// Same catalogue rule as [`start_browser`]; the server-side state check
+/// makes a stale restart button safe (no surprise close of a working
+/// remote-control browser).
+#[procedure]
+pub async fn restart_browser(cx: &Cx, name: String) -> Result<Result<String, String>> {
+    let Some(def) = BrowserDef::by_process(&name) else {
+        return rejected(format!("unsupported browser: {name}"));
+    };
+
+    let browsers: &Arc<dyn BrowserService> = app_context(cx);
+    Ok(match browsers.restart(def) {
+        Ok(info) => Ok(info.display()),
+        Err(error) => Err(error.to_string()),
+    })
 }
 
 /// Only http/https may be opened, with no embedded whitespace or control

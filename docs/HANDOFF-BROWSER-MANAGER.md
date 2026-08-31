@@ -1,7 +1,10 @@
 # Handoff — browser manager & CDP remote (L4)
 
-Status: **design validated live on the host, not started.** Validated 2026-08-31
-against Brave 152.0.7977.64 (Chromium 152) on the owner's Windows machine.
+Status: **steps 1–2 implemented and mock-validated end to end; real restart
+flow built but not yet live-fired.** Step 1 (detect + probe → browser line)
+and step 2 (start/restart procedures + onboarding buttons) landed 2026-08-31.
+Validated 2026-08-31 against Brave 152.0.7977.64 (Chromium 152) on the
+owner's Windows machine.
 
 ## Goal
 
@@ -29,6 +32,18 @@ that detects the browser and proposes (never forces) enabling the channel.
   still holding the ProcessSingleton *and still serving the debugging port*.
   A restart flow must treat "closed" as "process tree fully exited" and
   force-stop leftovers after the graceful close.
+- **Edge's startup boost keeps msedge.exe running with no window.** The
+  owner said "Edge is not running" while real-Edge-path msedge.exe processes
+  answered the process enumeration — same trap as Brave background mode,
+  one layer up: *the user's notion of "running" and the process table's
+  disagree*. Lesson applied: display-only browsers must never drive
+  onboarding buttons (see `startable()` in `browsers.rs`); a browser beam
+  cannot relaunch would only ever produce a dead-end error.
+- **WebView2 note (unconfirmed, watch for it):** other apps embed
+  msedge.exe via the WebView2 runtime (`\Microsoft\EdgeWebView\` paths).
+  Detection is name-based today; if a false "Edge" shows up from an
+  embedded runtime, add per-def path markers (`\Microsoft\Edge\` vs
+  `\EdgeWebView\`).
 - **The port is localhost-only and unauthenticated.** Anything local could
   drive that browser. Accepted for this home setup (owner decision, same
   trust model as beam itself: LAN, no auth). Never pass a non-loopback bind
@@ -116,21 +131,74 @@ What the protocol actually gives us, once `/json/version` answers:
   restart? (Verify once; the `createTarget` reopen makes it moot for media.)
 - Exe path discovery: standard install paths first
   (`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`),
-  per-user install second; registry lookup only if needed.
+  per-user install second; registry lookup only if needed. (Both paths
+  implemented; only ProgramFiles observed on this machine.)
 - Port collision policy (own 9223 vs probing 9222) — simple version above is
   probably enough for a single-user home setup.
 - Privacy: `/json/list` pushes real tab titles + URLs to the LAN. This is
   the moment the **pairing token** idea (IDEAS.md) stops being optional-ish.
+- Who may own a live CDP port when several CDP-capable browsers run?
+  Attribution today: table order, brave first (see `attributed_states`).
 
 ## Out of scope here
 
 L3 UIA (demoted: Firefox fallback only), SMTC (shelved — read-only added
 little; CDP supersedes it for browsers), Chrome/Edge proper, Firefox CDP.
 
+## Where we are (steps 1–2 landed, WIP)
+
+Landed and unit-tested (32 tests) + mock-validated in a real browser:
+
+- `src/browsers.rs` — `BrowserService` trait: `detect` (read-only) +
+  `start`/`restart` (both end in a verification probe, so `Ok` means the
+  endpoint is already answering on port 9223). Const browser table with
+  `install_paths` (brave only; the rest are display-only). OS backend:
+  tool-help process enumeration, loopback `GET /json/version` probe
+  (9223, then 9222; 500 ms timeouts), exe resolution (ProgramFiles →
+  per-user LOCALAPPDATA, fail-fast *before* anything gets closed), the
+  validated restart flow (graceful `taskkill` → wait for full tree exit →
+  force-stop leftovers → cold launch `--remote-debugging-port=9223
+  --no-first-run --no-default-browser-check` → probe 15 s, honest timeout
+  error). `MockBrowser` is a state machine that records actions and mirrors
+  every refusal, so `--mock` exercises the whole flow.
+- `src/ui.rs` — `start_browser` / `restart_browser` procedures
+  (catalogue-validated like `press_key`; errors as data) and the
+  "05 — Browser" section: **[Start]** when nothing startable runs,
+  **[Restart + warning]** when the headline browser runs without CDP, a
+  passive note when active. Stale-button safety is server-side: a restart
+  click when CDP is already up is refused ("nothing to do"), never a
+  surprise second restart.
+- `src/main.rs` — browser service as third app context; `/focus` returns
+  focus line + browser line (staged toward a `/context` payload);
+  `build_id` covers the new procedures.
+
+Verified in a real browser against the mock: restart click → STATUS shows
+"remote control active (port 9223)", the BROWSER strip flips on the next
+2 s poll, a stale second click is refused (log records exactly one
+restart), and a reload renders "Remote control is active.".
+
+**Not yet done / known gaps:**
+
+- The **real** restart flow has never been live-fired from beam (the OS
+  mechanics were validated by hand pre-implementation). It closes the
+  user's browser — the owner clicks it deliberately.
+- The BROWSER line is pure detection truth: when only non-startable
+  browsers "run" (Edge startup boost), the line says Edge while the button
+  offers Start for Brave. Honest but reads odd; could prefer startable
+  browsers in the headline later.
+- A user-launched CDP browser beam cannot manage (e.g. Chrome on 9222) is
+  reported but the onboarding still offers Start-Brave; step 3's CDP
+  session view should recognize and adopt it instead.
+- No window-awareness: "running" means "process tree alive", not "has a
+  window". Fine for start/restart (ProcessSingleton rules), may matter for
+  the deep remote later.
+
 ## Suggested build order
 
-1. `BrowserService` detect + probe (read-only) → browser state on the page
-2. start / restart procedures + verification probe
+1. ~~`BrowserService` detect + probe (read-only) → browser state on the
+   page~~ — done
+2. ~~start / restart procedures + verification probe~~ — done, real
+   restart not yet live-fired
 3. CDP read: tab list + play state (tab list card on the phone)
 4. CDP act: activate tab (with window-raise), open URL
 5. deep remote: seek, skip-intro, next-episode (Netflix/YouTube layouts)
