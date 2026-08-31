@@ -127,7 +127,6 @@ pub async fn home(cx: &Cx) -> Result {
                                 </button>
                             }
                         </div>
-                        <p class="remote-hint">"f · j · l go to the host's focused window — click the video first."</p>
                     </section>
                     <section>
                         <span class="tag">"03 — Keys"</span>

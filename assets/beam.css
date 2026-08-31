@@ -285,13 +285,6 @@ textarea::placeholder {
   grid-column: 1 / -1;
 }
 
-.remote-hint {
-  margin: 12px 0 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  color: #9b9788;
-}
-
 .urlrow {
   display: flex;
 }
