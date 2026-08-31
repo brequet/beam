@@ -8,6 +8,7 @@ use topcoat::{
     view::view,
 };
 
+use crate::context::{ContextService, focus_line};
 use crate::input::{InputError, InputService};
 use crate::keys::{Key, KeyKind, REMOTE, TYPING};
 
@@ -43,6 +44,9 @@ pub async fn home(cx: &Cx) -> Result {
     let build = info.build.clone();
     let reconnecting = format!("reconnecting to {hostname}…");
 
+    let context: &Arc<dyn ContextService> = app_context(cx);
+    let focus = focus_line(context.focused_window());
+
     view! {
         signal text = String::new();
         signal url_text = String::new();
@@ -72,6 +76,10 @@ pub async fn home(cx: &Cx) -> Result {
                     </span>
                     <span class="mono">(url)</span>
                 </header>
+                <p class="focus-line">
+                    <b>"FOCUS"</b>
+                    <span id="focus-text">(focus)</span>
+                </p>
                 <div class="blocks">
                     <section class="b-text">
                         <span class="tag">"01 — Text"</span>

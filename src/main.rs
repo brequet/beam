@@ -1,4 +1,5 @@
 mod autostart;
+mod context;
 mod input;
 mod keys;
 mod ui;
@@ -12,13 +13,14 @@ use anyhow::Context;
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
-use topcoat::context::Cx;
+use topcoat::context::{Cx, app_context};
 use topcoat::router::{
     Body, HeaderValue, Method, Methods, Path, PathBuf, Route, RouteFuture, RouteId, Router, header,
     response::Response,
 };
 use topcoat::runtime::{Procedure, RouterBuilderProcedureExt};
 
+use crate::context::{ContextService, MockContext, OsContext, focus_line};
 use crate::input::{InputService, MockInput, OsInput};
 use crate::ui::HostInfo;
 
@@ -213,6 +215,55 @@ impl Route for HealthRoute {
     }
 }
 
+/// A `Route` serving the host's focused window as one plain-text line.
+///
+/// The page's focus script polls it while the tab is visible. It is a read
+/// (like `/healthz`), not a procedure: ambient host state the page refreshes
+/// on its own, not an action.
+struct FocusRoute {
+    id: RouteId,
+    path: PathBuf,
+}
+
+impl FocusRoute {
+    fn new() -> Self {
+        Self {
+            id: RouteId::new(),
+            path: Path::new("/focus").to_owned(),
+        }
+    }
+}
+
+impl Route for FocusRoute {
+    fn id(&self) -> RouteId {
+        self.id
+    }
+
+    fn methods(&self) -> Methods<'_> {
+        Methods::Only(&[Method::GET])
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn handle<'cx>(&'cx self, cx: &'cx Cx, _body: Body) -> RouteFuture<'cx> {
+        Box::pin(async move {
+            let context: &Arc<dyn ContextService> = app_context(cx);
+            let line = focus_line(context.focused_window());
+            let mut response = Response::new(Body::from(line));
+            let headers = response.headers_mut();
+            headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/plain; charset=utf-8"),
+            );
+            // Reflects focus right now, so it must never be cached.
+            headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+            Ok(response)
+        })
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -247,6 +298,12 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         Arc::new(MockInput::default())
     } else {
         Arc::new(OsInput::new().context("initializing the OS input backend")?)
+    };
+
+    let context: Arc<dyn ContextService> = if args.mock {
+        Arc::new(MockContext)
+    } else {
+        Arc::new(OsContext)
     };
 
     let lan_ip = detect_lan_ip()
@@ -294,7 +351,9 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
             "image/png",
         ))
         .route(HealthRoute::new(build.clone()))
+        .route(FocusRoute::new())
         .app_context(input)
+        .app_context(context)
         .app_context(HostInfo {
             hostname,
             url: url.clone(),

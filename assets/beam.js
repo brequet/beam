@@ -83,4 +83,28 @@
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) scheduleProbe(0);
   });
+
+  // Focus awareness: the host's focused window, polled while the tab is
+  // visible. On failure the line just goes stale — the health script owns
+  // the offline state, and the next successful poll catches up.
+  var focusText = document.getElementById("focus-text");
+  if (focusText !== null) {
+    var refreshFocus = function () {
+      if (document.hidden) return;
+      fetch("/focus", { cache: "no-store" })
+        .then(function (response) {
+          if (!response.ok) throw new Error("focus " + response.status);
+          return response.text();
+        })
+        .then(function (line) {
+          focusText.textContent = line;
+        })
+        .catch(function () {});
+    };
+    refreshFocus();
+    setInterval(refreshFocus, 2000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) refreshFocus();
+    });
+  }
 })();

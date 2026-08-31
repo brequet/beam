@@ -62,6 +62,23 @@ body.offline .dot {
   animation: beam-pulse 1.2s ease-in-out infinite;
 }
 
+.focus-line {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 16px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #9b9788;
+  overflow-wrap: anywhere;
+}
+
+.focus-line b {
+  color: var(--ink);
+  font-weight: 700;
+  margin-right: 8px;
+}
+
 @keyframes beam-pulse {
   50% {
     opacity: 0.25;
