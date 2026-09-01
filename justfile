@@ -1,4 +1,4 @@
-# beam — development tasks (`just` lists them)
+# zappette — development tasks (`just` lists them)
 [windows]
 set shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 
@@ -20,19 +20,19 @@ run *args:
 
 # Start a DETACHED mock server (rebuilds + re-bundles first; no real keystrokes).
 dev-mock port="5001":
-    pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 start -Port {{port}} -Mock
+    pwsh -NoLogo -NoProfile -File scripts/zappette-dev.ps1 start -Port {{port}} -Mock
 
 # Start a DETACHED server with REAL injection (rebuilds + re-bundles first).
 dev port="5000":
-    pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 start -Port {{port}}
+    pwsh -NoLogo -NoProfile -File scripts/zappette-dev.ps1 start -Port {{port}}
 
 # Stop the detached dev server listening on a port.
 dev-stop port="5001":
-    pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 stop -Port {{port}}
+    pwsh -NoLogo -NoProfile -File scripts/zappette-dev.ps1 stop -Port {{port}}
 
 # Print the dev server log (follow=1 streams it).
 dev-log port="5001" follow="":
-    pwsh -NoLogo -NoProfile -File scripts/beam-dev.ps1 log -Port {{port}} {{ if follow != "" { "-Follow" } else { "" } }}
+    pwsh -NoLogo -NoProfile -File scripts/zappette-dev.ps1 log -Port {{port}} {{ if follow != "" { "-Follow" } else { "" } }}
 
 # Run unit tests.
 test:

@@ -1,18 +1,18 @@
-# Controls a detached beam dev server.
+# Controls a detached zappette dev server.
 #
 # The server is spawned through WMI (Win32_Process.Create) with a .cmd wrapper,
 # so it is fully detached from the calling shell: agent shells that start it
 # return immediately instead of waiting on the server's process tree.
 #
 # Usage:
-#   scripts/beam-dev.ps1 start -Port 5001 -Mock   # mock input (no real keystrokes)
-#   scripts/beam-dev.ps1 start -Port 5000         # REAL input injection
-#   scripts/beam-dev.ps1 stop  -Port 5001
-#   scripts/beam-dev.ps1 log  -Port 5001 [-Follow]
+#   scripts/zappette-dev.ps1 start -Port 5001 -Mock   # mock input (no real keystrokes)
+#   scripts/zappette-dev.ps1 start -Port 5000         # REAL input injection
+#   scripts/zappette-dev.ps1 stop  -Port 5001
+#   scripts/zappette-dev.ps1 log  -Port 5001 [-Follow]
 #
 # 'start' kills any stale server on the port, then rebuilds the binary and
 # re-bundles assets (skip with -NoBuild) before spawning — so the page always
-# serves fresh code. Kill must happen first: a running beam.exe locks the
+# serves fresh code. Kill must happen first: a running zappette.exe locks the
 # binary and cargo could not relink over it.
 [CmdletBinding()]
 param(
@@ -25,14 +25,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root   = (Resolve-Path "$PSScriptRoot\..").Path
-$exe    = Join-Path $root "target\debug\beam.exe"
-$stamp  = "beam-dev-$Port"
+$exe    = Join-Path $root "target\debug\zappette.exe"
+$stamp  = "zappette-dev-$Port"
 $log    = Join-Path $root "target\$stamp.out.log"
 
-function Get-BeamPidOnPort {
+function Get-ZappettePidOnPort {
     Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
         Where-Object {
-            (Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq "beam"
+            (Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq "zappette"
         } |
         Select-Object -ExpandProperty OwningProcess -Unique
 }
@@ -41,11 +41,11 @@ switch ($Command) {
 
     "start" {
         # Kill a stale server holding the port BEFORE building (a running
-        # beam.exe locks the binary), instead of failing to bind later.
-        $stale = @(Get-BeamPidOnPort)
+        # zappette.exe locks the binary), instead of failing to bind later.
+        $stale = @(Get-ZappettePidOnPort)
         foreach ($procId in $stale) {
             Stop-Process -Id $procId -Force
-            Write-Host "killed stale beam pid=$procId on port $Port"
+            Write-Host "killed stale zappette pid=$procId on port $Port"
         }
 
         if (-not $NoBuild) {
@@ -62,17 +62,17 @@ switch ($Command) {
         }
 
         if (-not (Test-Path $exe)) {
-            throw "beam.exe not found at $exe - run 'just build' first"
+            throw "zappette.exe not found at $exe - run 'just build' first"
         }
 
         # Wrapper script: WMI spawns 'cmd /c wrapper', wrapper owns the log
         # handles so nothing is inherited by (or waits on) the caller's shell.
-        $beamArgs = if ($Mock) { "--mock" } else { "" }
+        $zappetteArgs = if ($Mock) { "--mock" } else { "" }
         $wrapper = Join-Path $root "target\$stamp.cmd"
         Set-Content -Path $wrapper -Encoding ascii -Value @(
             "@echo off"
             "cd /d `"$root`""
-            "`"$exe`" $beamArgs --port $Port > `"$log`" 2>&1"
+            "`"$exe`" $zappetteArgs --port $Port > `"$log`" 2>&1"
         )
 
         $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
@@ -94,26 +94,26 @@ switch ($Command) {
         }
         if (-not $up) {
             Get-Content $log -ErrorAction SilentlyContinue
-            throw "beam did not start listening on port $Port within 10s"
+            throw "zappette did not start listening on port $Port within 10s"
         }
 
         $mode = if ($Mock) { "mock (no real keystrokes)" } else { "REAL input injection" }
-        Write-Host "beam dev server: pid=$($result.ProcessId) port=$Port mode=$mode"
+        Write-Host "zappette dev server: pid=$($result.ProcessId) port=$Port mode=$mode"
         Write-Host "log: $log"
     }
 
     "stop" {
-        $procIds = @(Get-BeamPidOnPort)
+        $procIds = @(Get-ZappettePidOnPort)
         if (-not $procIds) {
-            Write-Host "no beam server listening on port $Port"
+            Write-Host "no zappette server listening on port $Port"
             return
         }
         foreach ($procId in $procIds) {
             Stop-Process -Id $procId -Force
-            Write-Host "stopped beam pid=$procId on port $Port"
+            Write-Host "stopped zappette pid=$procId on port $Port"
         }
         Start-Sleep -Milliseconds 300
-        if (Get-BeamPidOnPort) { throw "beam still listening on port $Port" }
+        if (Get-ZappettePidOnPort) { throw "zappette still listening on port $Port" }
     }
 
     "log" {

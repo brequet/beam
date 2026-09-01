@@ -1,6 +1,6 @@
 # Ideas & follow-ups
 
-A working backlog for beam. Nothing here is committed to — each item should
+A working backlog for zappette. Nothing here is committed to — each item should
 earn its place. Sizes: **S** (< 1h), **M** (an evening), **L** (multi-session).
 Keep the YAGNI rule when pulling from this list: one item at a time, vertical
 slice, shipped.
@@ -8,15 +8,15 @@ slice, shipped.
 ## Infrastructure
 
 ### Run at logon ("service" mode) — M
-Beam must run inside the **interactive user session** to inject keystrokes, so
+Zappette must run inside the **interactive user session** to inject keystrokes, so
 a classic Windows Service (session 0) cannot work. The correct pattern is
 *logon autostart in the user session*:
 
-- **Windows**: done — `beam install` / `beam uninstall` register a Task
+- **Windows**: done — `zappette install` / `zappette uninstall` register a Task
   Scheduler logon task scoped to the current user (no admin needed;
   `schtasks /sc onlogon` was avoided because it requires elevation). The task
-  runs `beam --hidden`, has no execution-time limit, survives on battery, and
-  refuses duplicate instances; status goes to `%LOCALAPPDATA%\beam\beam.log`.
+  runs `zappette --hidden`, has no execution-time limit, survives on battery, and
+  refuses duplicate instances; status goes to `%LOCALAPPDATA%\zappette\zappette.log`.
 - **macOS**: `LaunchAgent` plist in `~/Library/LaunchAgents` with `RunAtLoad`.
 - **Linux**: systemd user unit wanted by `graphical-session.target`.
 
@@ -24,7 +24,7 @@ Remaining for the nice version: a tray icon showing the URL and a "quit"
 action.
 
 ### Opt-in pairing token — M
-beam is unauthenticated by design (see README security note), which is only
+zappette is unauthenticated by design (see README security note), which is only
 okay on trusted Wi-Fi. Optional hardening: generate a random token at startup,
 print `http://<ip>:<port>/?k=<token>`, and reject procedures/pages that don't
 carry it. Cheap to build on top of Topcoat's request context; keep it opt-in
@@ -65,7 +65,7 @@ in the Netflix player, `Esc` is "back to browse".
 
 ### Presentation remote preset — S (after combos)
 Arrows + `Enter`/`Esc`/`B`/`F5` + a big "black screen" button. A second UI
-tab that turns any phone into a clicker for slides. Probably beam's best
+tab that turns any phone into a clicker for slides. Probably zappette's best
 single-purpose use case.
 
 ### Media remote — v1 shipped
@@ -108,7 +108,7 @@ so the host display wakes without walking over. Fold it into the quick keys.
 
 ## Host awareness (context-driven remotes)
 
-Research arc from the "beam should know what the host is doing" exploration.
+Research arc from the "zappette should know what the host is doing" exploration.
 Layers stand alone; each sharpens the remote without requiring the next.
 Guiding rule: clean seams — awareness enters as a new service trait beside
 `InputService` (OS + mock backends), the web layer reads it through the
@@ -183,6 +183,6 @@ restart-flow gotchas and build order live in the handoff doc.
 
 ## Explicitly out of scope (for now)
 
-- **Mouse/touchpad control** — doubles the scope (pointer UI, latency tuning); revisit only if beam-as-keyboard proves itself.
+- **Mouse/touchpad control** — doubles the scope (pointer UI, latency tuning); revisit only if zappette-as-keyboard proves itself.
 - **Clipboard sync host→phone** — needs HTTPS for `navigator.clipboard`; messy on LAN http. The textarea paste path already covers the common direction.
 - **Databases, accounts, TLS** — see README; the moment one of these feels necessary, re-read the design rules first.

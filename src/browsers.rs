@@ -32,7 +32,7 @@ pub struct BrowserDef {
     pub cdp: CdpSupport,
     /// Candidate exe paths, standard install first, per-user second;
     /// `{ProgramFiles}` / `{LocalAppData}` expand from the environment.
-    /// Empty for browsers beam cannot launch yet (Chrome/Edge deferred,
+    /// Empty for browsers zappette cannot launch yet (Chrome/Edge deferred,
     /// Firefox has no CDP to enable).
     pub install_paths: &'static [&'static str],
 }
@@ -79,14 +79,14 @@ pub const BROWSERS: &[BrowserDef] = &[
     },
 ];
 
-/// Ports probed for a live DevTools endpoint: beam's own launch port first,
+/// Ports probed for a live DevTools endpoint: zappette's own launch port first,
 /// then the conventional 9222 recognizing a user-launched CDP browser.
 /// Never extended with a non-loopback address — the port is unauthenticated
 /// by design.
 pub const CDP_PROBE_PORTS: &[u16] = &[9223, 9222];
 
-/// The port beam launches browsers with — the first probe port.
-pub const BEAM_CDP_PORT: u16 = CDP_PROBE_PORTS[0];
+/// The port zappette launches browsers with — the first probe port.
+pub const ZAPPETTE_CDP_PORT: u16 = CDP_PROBE_PORTS[0];
 
 /// One running browser: which it is, and whether a DevTools port answered.
 /// A browser absent from [`BrowserService::detect`] is not running; its
@@ -127,13 +127,13 @@ pub trait BrowserService: Send + Sync {
     /// The known browsers currently running, in table order (brave first).
     fn detect(&self) -> Result<Vec<BrowserInfo>, BrowserError>;
 
-    /// Cold-starts the browser with beam's DevTools port and verifies the
+    /// Cold-starts the browser with zappette's DevTools port and verifies the
     /// endpoint answers. Refuses when the browser is already running: a
     /// running instance's ProcessSingleton silently drops the flag.
     fn start(&self, def: &'static BrowserDef) -> Result<BrowserInfo, BrowserError>;
 
     /// Gracefully closes the browser, force-stops leftovers, cold-starts it
-    /// with beam's DevTools port, and verifies. Refuses when remote control
+    /// with zappette's DevTools port, and verifies. Refuses when remote control
     /// is already active — the restart would only close a working browser.
     fn restart(&self, def: &'static BrowserDef) -> Result<BrowserInfo, BrowserError>;
 }
@@ -169,9 +169,9 @@ pub enum OnboardingAction {
     Unavailable,
 }
 
-/// Whether beam can launch this browser at all. Chrome/Edge/Firefox are
+/// Whether zappette can launch this browser at all. Chrome/Edge/Firefox are
 /// display-only today: Edge's startup boost keeps msedge.exe processes
-/// running with no window in sight, and a browser beam cannot relaunch must
+/// running with no window in sight, and a browser zappette cannot relaunch must
 /// never surface a restart button that could only ever fail.
 fn startable(def: &BrowserDef) -> bool {
     !def.install_paths.is_empty()
@@ -275,7 +275,7 @@ fn running_without_cdp_error(def: &BrowserDef) -> BrowserError {
 }
 
 fn unstartable_error(def: &BrowserDef) -> BrowserError {
-    BrowserError::Act(format!("{} cannot be started by beam yet", def.label))
+    BrowserError::Act(format!("{} cannot be started by zappette yet", def.label))
 }
 
 fn not_installed_error(def: &BrowserDef) -> BrowserError {
@@ -328,7 +328,7 @@ impl BrowserService for OsBrowser {
         os::wait_for_cdp(def.label, VERIFY_TIMEOUT)?;
         Ok(BrowserInfo {
             def,
-            cdp_port: Some(BEAM_CDP_PORT),
+            cdp_port: Some(ZAPPETTE_CDP_PORT),
         })
     }
 
@@ -356,7 +356,7 @@ impl BrowserService for OsBrowser {
         os::wait_for_cdp(def.label, VERIFY_TIMEOUT)?;
         Ok(BrowserInfo {
             def,
-            cdp_port: Some(BEAM_CDP_PORT),
+            cdp_port: Some(ZAPPETTE_CDP_PORT),
         })
     }
 }
@@ -471,11 +471,11 @@ impl BrowserService for MockBrowser {
             MockState::NotRunning => {
                 self.record(format!("start {}", def.process));
                 self.set_state(MockState::Running {
-                    cdp: Some(BEAM_CDP_PORT),
+                    cdp: Some(ZAPPETTE_CDP_PORT),
                 });
                 Ok(BrowserInfo {
                     def,
-                    cdp_port: Some(BEAM_CDP_PORT),
+                    cdp_port: Some(ZAPPETTE_CDP_PORT),
                 })
             }
         }
@@ -491,11 +491,11 @@ impl BrowserService for MockBrowser {
         }
         self.record(format!("restart {}", def.process));
         self.set_state(MockState::Running {
-            cdp: Some(BEAM_CDP_PORT),
+            cdp: Some(ZAPPETTE_CDP_PORT),
         });
         Ok(BrowserInfo {
             def,
-            cdp_port: Some(BEAM_CDP_PORT),
+            cdp_port: Some(ZAPPETTE_CDP_PORT),
         })
     }
 }
@@ -514,7 +514,7 @@ mod os {
         TH32CS_SNAPPROCESS,
     };
 
-    use super::{BEAM_CDP_PORT, BrowserError, CDP_PROBE_PORTS};
+    use super::{ZAPPETTE_CDP_PORT, BrowserError, CDP_PROBE_PORTS};
 
     const PROBE_TIMEOUT: Duration = Duration::from_millis(500);
     const MAX_PROBE_RESPONSE: usize = 8 * 1024;
@@ -647,10 +647,10 @@ mod os {
         }
     }
 
-    /// Cold-starts the browser with beam's DevTools port.
+    /// Cold-starts the browser with zappette's DevTools port.
     pub fn launch_with_cdp(exe: &Path) -> Result<(), BrowserError> {
         Command::new(exe)
-            .arg(format!("--remote-debugging-port={BEAM_CDP_PORT}"))
+            .arg(format!("--remote-debugging-port={ZAPPETTE_CDP_PORT}"))
             .arg("--no-first-run")
             .arg("--no-default-browser-check")
             .spawn()
@@ -660,18 +660,18 @@ mod os {
         Ok(())
     }
 
-    /// Polls beam's DevTools port until it answers or the timeout passes —
+    /// Polls zappette's DevTools port until it answers or the timeout passes —
     /// the honest-error clause: say the browser may have dropped support,
     /// don't hang.
     pub fn wait_for_cdp(label: &str, timeout: Duration) -> Result<(), BrowserError> {
         let deadline = Instant::now() + timeout;
         loop {
-            if cdp_answers(BEAM_CDP_PORT) {
+            if cdp_answers(ZAPPETTE_CDP_PORT) {
                 return Ok(());
             }
             if Instant::now() >= deadline {
                 return Err(BrowserError::Act(format!(
-                    "{label} started but remote control never answered on port {BEAM_CDP_PORT} — a browser update may have dropped debugging support"
+                    "{label} started but remote control never answered on port {ZAPPETTE_CDP_PORT} — a browser update may have dropped debugging support"
                 )));
             }
             std::thread::sleep(POLL_STEP);
@@ -838,7 +838,7 @@ mod tests {
     }
 
     #[test]
-    fn onboarding_offers_no_buttons_for_browsers_beam_cannot_start() {
+    fn onboarding_offers_no_buttons_for_browsers_zappette_cannot_start() {
         let (brave, edge) = (&BROWSERS[0], &BROWSERS[2]);
         // Edge's startup boost keeps processes running with no window in
         // sight — they must not surface a button that could never work.
@@ -914,8 +914,8 @@ mod tests {
         // Start: nothing running → cold start with remote control.
         let mock = MockBrowser::with_state(MockState::NotRunning);
         let info = mock.start(&BROWSERS[0]).unwrap();
-        assert_eq!(info.cdp_port, Some(BEAM_CDP_PORT));
-        assert_eq!(mock.detect().unwrap()[0].cdp_port, Some(BEAM_CDP_PORT));
+        assert_eq!(info.cdp_port, Some(ZAPPETTE_CDP_PORT));
+        assert_eq!(mock.detect().unwrap()[0].cdp_port, Some(ZAPPETTE_CDP_PORT));
         assert_eq!(*mock.events.lock().unwrap(), vec!["start brave.exe"]);
         // A further restart now refuses: the browser is already remote-controlled.
         assert!(mock.restart(&BROWSERS[0]).is_err());
@@ -923,14 +923,14 @@ mod tests {
         // Restart: running without remote control → the restart flow.
         let mock = MockBrowser::new();
         let info = mock.restart(&BROWSERS[0]).unwrap();
-        assert_eq!(info.cdp_port, Some(BEAM_CDP_PORT));
+        assert_eq!(info.cdp_port, Some(ZAPPETTE_CDP_PORT));
         assert_eq!(*mock.events.lock().unwrap(), vec!["restart brave.exe"]);
     }
 
     #[test]
     fn mock_start_refuses_every_already_running_shape() {
         let mock = MockBrowser::with_state(MockState::Running {
-            cdp: Some(BEAM_CDP_PORT),
+            cdp: Some(ZAPPETTE_CDP_PORT),
         });
         let error = mock.start(&BROWSERS[0]).unwrap_err().to_string();
         assert!(
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn mock_restart_refuses_when_already_active_but_starts_when_closed() {
         let mock = MockBrowser::with_state(MockState::Running {
-            cdp: Some(BEAM_CDP_PORT),
+            cdp: Some(ZAPPETTE_CDP_PORT),
         });
         let error = mock.restart(&BROWSERS[0]).unwrap_err().to_string();
         assert!(
@@ -956,14 +956,14 @@ mod tests {
 
         let mock = MockBrowser::with_state(MockState::NotRunning);
         mock.restart(&BROWSERS[0]).unwrap();
-        assert_eq!(mock.detect().unwrap()[0].cdp_port, Some(BEAM_CDP_PORT));
+        assert_eq!(mock.detect().unwrap()[0].cdp_port, Some(ZAPPETTE_CDP_PORT));
     }
 
     #[test]
     fn mock_mirrors_the_real_deferred_browsers() {
         let mock = MockBrowser::new();
         let error = mock.start(&BROWSERS[1]).unwrap_err().to_string();
-        assert!(error.contains("cannot be started by beam yet"), "{error}");
+        assert!(error.contains("cannot be started by zappette yet"), "{error}");
     }
 
     #[cfg(target_os = "windows")]

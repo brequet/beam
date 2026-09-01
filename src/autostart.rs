@@ -1,4 +1,4 @@
-//! Autostart support: register beam as a logon task so it starts with the
+//! Autostart support: register zappette as a logon task so it starts with the
 //! user session (required for keystroke injection — a Windows Service in
 //! session 0 cannot reach the focused window) without a visible console.
 //!
@@ -11,7 +11,7 @@ use std::path::Path;
 
 use anyhow::Context;
 
-/// Settings frozen into the logon task by `beam install`.
+/// Settings frozen into the logon task by `zappette install`.
 #[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
     pub host: Option<String>,
@@ -19,7 +19,7 @@ pub struct InstallOptions {
     pub mock: bool,
 }
 
-const TASK_NAME: &str = "beam";
+const TASK_NAME: &str = "zappette";
 
 #[cfg(windows)]
 pub fn install(options: &InstallOptions) -> anyhow::Result<()> {
@@ -54,7 +54,7 @@ pub fn install(options: &InstallOptions) -> anyhow::Result<()> {
         println!("  status log:      {}", log.display());
     }
     println!("  start now with:  schtasks /run /tn {TASK_NAME}");
-    println!("  remove with:     beam uninstall");
+    println!("  remove with:     zappette uninstall");
     Ok(())
 }
 
@@ -62,9 +62,9 @@ pub fn install(options: &InstallOptions) -> anyhow::Result<()> {
 pub fn uninstall() -> anyhow::Result<()> {
     match run_powershell(&uninstall_script())?.as_str() {
         "removed" => {
-            println!("removed logon task '{TASK_NAME}' (a task-started beam was stopped too)")
+            println!("removed logon task '{TASK_NAME}' (a task-started zappette was stopped too)")
         }
-        "not-installed" => println!("beam is not registered as a logon task"),
+        "not-installed" => println!("zappette is not registered as a logon task"),
         other => anyhow::bail!("unexpected Task Scheduler response: {other:?}"),
     }
     Ok(())
@@ -72,12 +72,12 @@ pub fn uninstall() -> anyhow::Result<()> {
 
 #[cfg(not(windows))]
 pub fn install(_options: &InstallOptions) -> anyhow::Result<()> {
-    anyhow::bail!("`beam install` is Windows-only right now (macOS/Linux: see docs/IDEAS.md)")
+    anyhow::bail!("`zappette install` is Windows-only right now (macOS/Linux: see docs/IDEAS.md)")
 }
 
 #[cfg(not(windows))]
 pub fn uninstall() -> anyhow::Result<()> {
-    anyhow::bail!("`beam uninstall` is Windows-only right now (macOS/Linux: see docs/IDEAS.md)")
+    anyhow::bail!("`zappette uninstall` is Windows-only right now (macOS/Linux: see docs/IDEAS.md)")
 }
 
 /// Hides the console window this process owns (no-op when there is none, or
@@ -106,7 +106,7 @@ pub fn hide_console() {
 #[cfg(not(windows))]
 pub fn hide_console() {}
 
-/// Records the current run's status line to `%LOCALAPPDATA%\beam\beam.log`.
+/// Records the current run's status line to `%LOCALAPPDATA%\zappette\zappette.log`.
 ///
 /// Only useful with `--hidden`, where stdout is invisible; each run replaces
 /// the file, so it always describes the latest run.
@@ -131,7 +131,7 @@ pub fn log_status(_message: &str) {}
 #[cfg(windows)]
 pub fn status_log_path() -> Option<std::path::PathBuf> {
     std::env::var_os("LOCALAPPDATA")
-        .map(|base| std::path::PathBuf::from(base).join("beam").join("beam.log"))
+        .map(|base| std::path::PathBuf::from(base).join("zappette").join("zappette.log"))
 }
 
 /// The exact command line the logon task will run: `--hidden` plus whatever
@@ -177,7 +177,7 @@ if ($existing) {{
     Set-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Settings $settings | Out-Null
     if ($old -ieq $exe) {{ Write-Output 'updated' }} else {{ Write-Output "updated $old" }}
 }} else {{
-    Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'beam: phone-keyboard bridge, starts at logon' | Out-Null
+    Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'zappette: phone-keyboard bridge, starts at logon' | Out-Null
     Write-Output 'installed'
 }}
 "#,
@@ -280,8 +280,8 @@ mod tests {
     #[test]
     fn ps_quote_escapes_single_quotes() {
         assert_eq!(
-            ps_quote("C:\\Program Files\\beam.exe"),
-            "'C:\\Program Files\\beam.exe'"
+            ps_quote("C:\\Program Files\\zappette.exe"),
+            "'C:\\Program Files\\zappette.exe'"
         );
         assert_eq!(ps_quote("it's"), "'it''s'");
     }
@@ -302,9 +302,9 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn install_script_scopes_the_task_to_this_user() {
-        let script = install_script(Path::new("C:\\apps\\beam.exe"), "C:\\apps", "--hidden");
+        let script = install_script(Path::new("C:\\apps\\zappette.exe"), "C:\\apps", "--hidden");
         assert!(script.contains("-AtLogOn -User"), "{script}");
-        assert!(script.contains("'C:\\apps\\beam.exe'"), "{script}");
+        assert!(script.contains("'C:\\apps\\zappette.exe'"), "{script}");
         assert!(
             script.contains("ExecutionTimeLimit ([TimeSpan]::Zero)"),
             "{script}"

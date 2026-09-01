@@ -1,6 +1,6 @@
 {
-  "name": "beam",
-  "short_name": "beam",
+  "name": "zappette",
+  "short_name": "zappette",
   "description": "Send text and keys to this machine's focused window over the LAN.",
   "start_url": "/",
   "scope": "/",

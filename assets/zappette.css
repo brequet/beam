@@ -59,7 +59,7 @@ body {
 
 body.offline .dot {
   background: #c92a2a;
-  animation: beam-pulse 1.2s ease-in-out infinite;
+  animation: zappette-pulse 1.2s ease-in-out infinite;
 }
 
 .focus-line {
@@ -79,7 +79,7 @@ body.offline .dot {
   margin-right: 8px;
 }
 
-@keyframes beam-pulse {
+@keyframes zappette-pulse {
   50% {
     opacity: 0.25;
   }

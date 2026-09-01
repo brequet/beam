@@ -8,7 +8,7 @@ owner's Windows machine.
 
 ## Goal
 
-Make beam a true remote for the host's browser: select tabs, read play state,
+Make zappette a true remote for the host's browser: select tabs, read play state,
 seek, click Netflix's "Skip Intro" / "Next Episode" — all focusless — by
 driving the browser over the DevTools protocol (CDP), with an onboarding flow
 that detects the browser and proposes (never forces) enabling the channel.
@@ -37,7 +37,7 @@ that detects the browser and proposes (never forces) enabling the channel.
   answered the process enumeration — same trap as Brave background mode,
   one layer up: *the user's notion of "running" and the process table's
   disagree*. Lesson applied: display-only browsers must never drive
-  onboarding buttons (see `startable()` in `browsers.rs`); a browser beam
+  onboarding buttons (see `startable()` in `browsers.rs`); a browser zappette
   cannot relaunch would only ever produce a dead-end error.
 - **WebView2 note (unconfirmed, watch for it):** other apps embed
   msedge.exe via the WebView2 runtime (`\Microsoft\EdgeWebView\` paths).
@@ -46,7 +46,7 @@ that detects the browser and proposes (never forces) enabling the channel.
   `\EdgeWebView\`).
 - **The port is localhost-only and unauthenticated.** Anything local could
   drive that browser. Accepted for this home setup (owner decision, same
-  trust model as beam itself: LAN, no auth). Never pass a non-loopback bind
+  trust model as zappette itself: LAN, no auth). Never pass a non-loopback bind
   address to the flag.
 - **Chrome/Edge proper would refuse the default-dir flag** (136+ hardening).
   Out of scope; if ever wanted, those need `--user-data-dir` pointing
@@ -72,7 +72,7 @@ States and phone actions (the button **is** the consent):
 | running, CDP up | "remote control active" → page flips into the deep remote |
 
 **Detection** — process enumeration (`windows` crate, already in the tree)
-+ `GET 127.0.0.1:<port>/json/version` probe. Beam uses its own port (e.g.
++ `GET 127.0.0.1:<port>/json/version` probe. Zappette uses its own port (e.g.
 9223) when *it* launches, but also probes 9222 to recognize a user-launched
 CDP browser. Any cached CDP state must carry a short TTL and be re-probed on
 use — ports change per launch.
@@ -179,14 +179,14 @@ restart), and a reload renders "Remote control is active.".
 
 **Not yet done / known gaps:**
 
-- The **real** restart flow has never been live-fired from beam (the OS
+- The **real** restart flow has never been live-fired from zappette (the OS
   mechanics were validated by hand pre-implementation). It closes the
   user's browser — the owner clicks it deliberately.
 - The BROWSER line is pure detection truth: when only non-startable
   browsers "run" (Edge startup boost), the line says Edge while the button
   offers Start for Brave. Honest but reads odd; could prefer startable
   browsers in the headline later.
-- A user-launched CDP browser beam cannot manage (e.g. Chrome on 9222) is
+- A user-launched CDP browser zappette cannot manage (e.g. Chrome on 9222) is
   reported but the onboarding still offers Start-Brave; step 3's CDP
   session view should recognize and adopt it instead.
 - No window-awareness: "running" means "process tree alive", not "has a
@@ -206,6 +206,6 @@ restart), and a reload renders "Remote control is active.".
 ## Pointers
 
 `src/context.rs` (service seam pattern), `src/main.rs` (`FocusRoute` — the
-route-vs-procedure rule in a doc comment), `src/ui.rs`, `assets/beam.js`
+route-vs-procedure rule in a doc comment), `src/ui.rs`, `assets/zappette.js`
 (visibility-gated poller), `docs/IDEAS.md` (roadmap; L4 item cross-links
 here).

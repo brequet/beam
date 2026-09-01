@@ -1,14 +1,14 @@
-# beam
+# zappette
 
 A single-binary local-network input bridge: devices on the Wi-Fi open a page,
-and beam injects what they send as keyboard input into the focused window on
+and zappette injects what they send as keyboard input into the focused window on
 the host. No auth, no database, by design.
 
 ## Language
 
 **Key**:
 A single discrete keypress a device can send to the host, chosen from the
-fixed set beam supports — media keys, letter keys, and typing keys alike.
+fixed set zappette supports — media keys, letter keys, and typing keys alike.
 _Avoid_: Special key, hotkey, quick key
 
 **Media key**:
@@ -23,7 +23,7 @@ synonyms; the catalogue is the complete description of what devices can send.
 _Avoid_: Alias, key code, key name
 
 **Key catalogue**:
-The fixed, exhaustive description of every Key beam supports: its Wire name,
+The fixed, exhaustive description of every Key zappette supports: its Wire name,
 label, kind, and the Pad it renders on, in display order. What devices may
 send, what the page renders, and what `press_key` accepts are all read from
 it — no second list exists.

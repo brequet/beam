@@ -4,7 +4,7 @@ Guidance for coding agents working in this repository.
 
 ## Project
 
-**beam** — single-binary Rust web server (Topcoat + tokio) that serves a page
+**zappette** — single-binary Rust web server (Topcoat + tokio) that serves a page
 to devices on the local Wi-Fi and injects what they send as keyboard input
 into the host's focused window (enigo). No auth, no database, by design.
 
@@ -39,10 +39,10 @@ Use the justfile (pwsh shell on Windows):
 - **Never start background servers with `Start-Process`** (or a blocking
   `cargo run`): the spawned process stays inside the shell's process tree and
   the harness waits on it — tool calls appear to hang for minutes.
-- The only supported pattern is `scripts/beam-dev.ps1`: it spawns via WMI
+- The only supported pattern is `scripts/zappette-dev.ps1`: it spawns via WMI
   (`Win32_Process.Create`) through a `.cmd` wrapper that owns the log handles,
   so the server is fully detached and the calling shell returns immediately.
-- Kill servers by port (`just dev-stop`), never leave `beam.exe` running when
+- Kill servers by port (`just dev-stop`), never leave `zappette.exe` running when
   a session ends. Stale logs/wrappers live in `target/` (gitignored).
 - Before committing, check `git status` for browser-test artifacts —
   `.playwright-mcp/` is gitignored but new tool dirs can appear.

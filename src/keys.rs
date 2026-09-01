@@ -5,7 +5,7 @@
 //! the input backend in `input.rs`.
 
 /// A single discrete keypress a device can send to the host, chosen from
-/// the fixed set beam supports — media keys, letter keys, and typing keys
+/// the fixed set zappette supports — media keys, letter keys, and typing keys
 /// alike.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Key {
@@ -35,7 +35,7 @@ pub enum KeyKind {
     Typing,
 }
 
-/// One catalogue entry: a [`Key`] and the facts the rest of beam reads.
+/// One catalogue entry: a [`Key`] and the facts the rest of zappette reads.
 #[derive(Debug)]
 pub struct KeyDef {
     pub key: Key,

@@ -66,14 +66,14 @@ pub async fn home(cx: &Cx) -> Result {
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <meta name="theme-color" content="#fffdf5">
-                <meta name="beam-build" content=(build)>
-                <title>"beam"</title>
+                <meta name="zappette-build" content=(build)>
+                <title>"zappette"</title>
                 <link rel="icon" href="/icon-192.png">
                 <link rel="manifest" href="/manifest.webmanifest">
                 <link rel="apple-touch-icon" href="/icon-192.png">
-                <link rel="stylesheet" href="/beam.css">
+                <link rel="stylesheet" href="/zappette.css">
                 topcoat::runtime::script()
-                <script src="/beam.js" defer="defer"></script>
+                <script src="/zappette.js" defer="defer"></script>
             </head>
             <body>
                 <div class="banner" role="status">(reconnecting)</div>
@@ -279,7 +279,7 @@ pub async fn open_url(cx: &Cx, raw: String) -> Result<Result<String, String>> {
     backend_outcome(format!("Opened {url} on the host."), input.open_url(&url))
 }
 
-/// Cold-starts a known browser with beam's remote-control port.
+/// Cold-starts a known browser with zappette's remote-control port.
 ///
 /// The catalogue is the complete description of what can be started;
 /// anything else is rejected here. The button is the consent, and a stale
@@ -297,7 +297,7 @@ pub async fn start_browser(cx: &Cx, name: String) -> Result<Result<String, Strin
     })
 }
 
-/// Restarts a known browser with beam's remote-control port: graceful
+/// Restarts a known browser with zappette's remote-control port: graceful
 /// close, force-stop of leftovers, cold launch, verified endpoint.
 ///
 /// Same catalogue rule as [`start_browser`]; the server-side state check

@@ -26,17 +26,17 @@ use crate::context::{ContextService, MockContext, OsContext, focus_line};
 use crate::input::{InputService, MockInput, OsInput};
 use crate::ui::HostInfo;
 
-/// beam — send text and special keys from any device on the local network
+/// zappette — send text and special keys from any device on the local network
 /// to the host machine's focused window.
 #[derive(Parser, Debug)]
-#[command(name = "beam", version, about)]
+#[command(name = "zappette", version, about)]
 struct Args {
     /// Address to bind the web server to.
-    #[arg(long, env = "BEAM_HOST", default_value = "0.0.0.0")]
+    #[arg(long, env = "ZAPPETTE_HOST", default_value = "0.0.0.0")]
     host: String,
 
     /// Port to bind the web server to.
-    #[arg(long, env = "BEAM_PORT", default_value_t = 5000)]
+    #[arg(long, env = "ZAPPETTE_PORT", default_value_t = 5000)]
     port: u16,
 
     /// Log input events instead of injecting real keystrokes (for development).
@@ -53,9 +53,9 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Register a logon task so beam starts automatically at sign-in.
+    /// Register a logon task so zappette starts automatically at sign-in.
     ///
-    /// Flags passed here are frozen into the task; re-run `beam install`
+    /// Flags passed here are frozen into the task; re-run `zappette install`
     /// after changing them. Idempotent.
     Install {
         /// Address to bind the autostart server to (default: 0.0.0.0).
@@ -70,7 +70,7 @@ enum Command {
         #[arg(long)]
         mock: bool,
     },
-    /// Remove the logon task (and stop a task-started beam).
+    /// Remove the logon task (and stop a task-started zappette).
     Uninstall,
 }
 
@@ -116,7 +116,7 @@ fn qr_text(text: &str) -> String {
 
 /// A `Route` serving one immutable file embedded in the binary.
 ///
-/// Used for the small static files beam needs at fixed paths (PWA manifest,
+/// Used for the small static files zappette needs at fixed paths (PWA manifest,
 /// icons) so they ship inside the single executable instead of riding the
 /// asset bundle.
 struct StaticRoute {
@@ -171,7 +171,7 @@ impl Route for StaticRoute {
 
 /// A `Route` answering the page's connection probe with this build's id.
 ///
-/// The connection-health script in `beam.js` polls `/healthz` only while it
+/// The connection-health script in `zappette.js` polls `/healthz` only while it
 /// believes the server is gone; a 200 means recovery (and, if the build id
 /// differs from the one the page was rendered with, one self-reload).
 struct HealthRoute {
@@ -294,7 +294,7 @@ async fn main() -> anyhow::Result<()> {
     if args.hidden
         && let Err(err) = &result
     {
-        autostart::log_status(&format!("beam exited: {err:#}"));
+        autostart::log_status(&format!("zappette exited: {err:#}"));
     }
     result
 }
@@ -333,7 +333,7 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .map(|name| name.to_string_lossy().into_owned())
         .ok()
         .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| "beam".to_owned());
+        .unwrap_or_else(|| "zappette".to_owned());
 
     let build = build_id();
 
@@ -345,13 +345,13 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .procedure(ui::start_browser)
         .procedure(ui::restart_browser)
         .route(StaticRoute::new(
-            "/beam.css",
-            include_bytes!("../assets/beam.css"),
+            "/zappette.css",
+            include_bytes!("../assets/zappette.css"),
             "text/css",
         ))
         .route(StaticRoute::new(
-            "/beam.js",
-            include_bytes!("../assets/beam.js"),
+            "/zappette.js",
+            include_bytes!("../assets/zappette.js"),
             "text/javascript",
         ))
         .route(StaticRoute::new(
@@ -389,7 +389,7 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
         .with_context(|| format!("binding {}:{} failed", args.host, args.port))?;
 
     let up = format!(
-        "beam is up: {lan_ip}:{} (bound to {}:{})",
+        "zappette is up: {lan_ip}:{} (bound to {}:{})",
         args.port, args.host, args.port
     );
     if args.hidden {
@@ -401,7 +401,7 @@ async fn serve(args: &Args) -> anyhow::Result<()> {
 
     topcoat::serve(listener, router)
         .await
-        .context("serving beam")?;
+        .context("serving zappette")?;
     Ok(())
 }
 

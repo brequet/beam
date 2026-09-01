@@ -1,4 +1,4 @@
-// beam connection health.
+// zappette connection health.
 //
 // Procedure calls that fail at the network layer throw inside topcoat's
 // generated handlers and die as unhandled rejections — the page would sit
@@ -13,7 +13,7 @@
 (function () {
   "use strict";
 
-  var meta = document.querySelector('meta[name="beam-build"]');
+  var meta = document.querySelector('meta[name="zappette-build"]');
   var buildId = meta ? meta.getAttribute("content") : "";
   var timer = null;
   var backoffMs = 1000;
